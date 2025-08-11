@@ -7,7 +7,7 @@ import { loadSavedData, saveWords, saveStats } from './utils/storage';
 import { formatDate } from './utils/formatDate';
 import { calculateNextReview } from './utils/calculateNextReview';
 
-const App = () => {
+  const App = () => {
   const savedData = loadSavedData(initialWords);
   const [words, setWords] = useState(savedData.words);
   const [currentView, setCurrentView] = useState('dashboard');
@@ -176,6 +176,7 @@ const App = () => {
         ...newWord,
         id: Date.now(),
         category: newWord.category || 'Мои слова',
+        image: newWord.image || '📝',
         examples: newWord.examples.filter(ex => ex.length > 0),
         difficulty: 1,
         nextReview: new Date().getTime(),
@@ -192,7 +193,7 @@ const App = () => {
         english: '',
         russian: '',
         category: '',
-        image: '📝',
+        image: '',
         examples: ['', ''],
         pronunciation: ''
       });
@@ -1092,7 +1093,15 @@ const App = () => {
             className="bg-white rounded-lg shadow p-4 flex items-center justify-between hover:shadow-lg transition-shadow"
           >
             <div className="flex items-center gap-4">
-              <span className="text-3xl">{word.image}</span>
+                            {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
+                <img
+                  src={word.image}
+                  alt={word.english}
+                  className="w-10 h-10 object-cover rounded"
+                />
+              ) : (
+                <span className="text-3xl">{word.image}</span>
+              )}
               <div>
                 <h3 className="font-bold text-lg">{word.english}</h3>
                 <p className="text-gray-600">{word.russian}</p>

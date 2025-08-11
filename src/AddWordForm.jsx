@@ -1,0 +1,108 @@
+import React from 'react';
+import { X } from 'lucide-react';
+
+const AddWordForm = React.memo(({ newWord, handleNewWordChange, handleExampleChange, addNewWord, setShowAddWordForm, emojiList }) => (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold">Добавить новое слово</h2>
+        <button
+          onClick={() => setShowAddWordForm(false)}
+          className="p-2 hover:bg-gray-100 rounded-lg"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-semibold mb-1">Английское слово *</label>
+          <input
+            type="text"
+            value={newWord.english}
+            onChange={(e) => handleNewWordChange('english', e.target.value)}
+            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Hello"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-1">Русский перевод *</label>
+          <input
+            type="text"
+            value={newWord.russian}
+            onChange={(e) => handleNewWordChange('russian', e.target.value)}
+            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Привет"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-1">Произношение</label>
+          <input
+            type="text"
+            value={newWord.pronunciation}
+            onChange={(e) => handleNewWordChange('pronunciation', e.target.value)}
+            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="he-ˈloʊ"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-1">Категория</label>
+          <input
+            type="text"
+            value={newWord.category}
+            onChange={(e) => handleNewWordChange('category', e.target.value)}
+            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Мои слова"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-1">Иконка</label>
+          <div className="grid grid-cols-8 gap-2 max-h-32 overflow-y-auto p-2 border rounded-lg">
+            {emojiList.map(emoji => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => handleNewWordChange('image', emoji)}
+                className={`text-2xl p-1 rounded hover:bg-gray-100 ${newWord.image === emoji ? 'bg-blue-100 ring-2 ring-blue-500' : ''}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-1">Примеры использования</label>
+          <input
+            type="text"
+            value={newWord.examples[0]}
+            onChange={(e) => handleExampleChange(0, e.target.value)}
+            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+            placeholder="Hello, how are you?"
+          />
+          <input
+            type="text"
+            value={newWord.examples[1]}
+            onChange={(e) => handleExampleChange(1, e.target.value)}
+            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Say hello to your friend"
+          />
+        </div>
+
+        <button
+          onClick={addNewWord}
+          disabled={!newWord.english || !newWord.russian}
+          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-6 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Добавить слово (+2 монеты)
+        </button>
+      </div>
+    </div>
+  </div>
+));
+
+export default AddWordForm;

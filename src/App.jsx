@@ -25,6 +25,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
   const [scrambledLetters, setScrambledLetters] = useState([]);
   const [selectedLetters, setSelectedLetters] = useState([]);
   const [showAddWordForm, setShowAddWordForm] = useState(false);
+  const [wordListModal, setWordListModal] = useState(null);
   const [newWord, setNewWord] = useState({
     english: '',
     russian: '',
@@ -33,6 +34,25 @@ import { calculateNextReview } from './utils/calculateNextReview';
     examples: ['', ''],
     pronunciation: ''
   });
+
+  // Проверка ежедневной серии при загрузке
+  useEffect(() => {
+    setUserStats(prev => {
+      const today = new Date().toDateString();
+      if (prev.lastActiveDate === today) return prev;
+      let newStreak = 1;
+      if (prev.lastActiveDate) {
+        const diff = Math.floor((new Date(today) - new Date(prev.lastActiveDate)) / (1000 * 60 * 60 * 24));
+        newStreak = diff === 1 ? prev.streak + 1 : 1;
+      }
+      return {
+        ...prev,
+        streak: newStreak,
+        bestStreak: Math.max(prev.bestStreak, newStreak),
+        lastActiveDate: today
+      };
+    });
+  }, []);
 
   // Список эмодзи для выбора
   const emojiList = ['📝', '🌟', '🌈', '🔥', '💡', '🎨', '🎭', '🎪', '🎯', '🎲', '🎸', '🎹', '🏆', '🚀', '✨', '💎', '🌺', '🌸',
@@ -65,20 +85,42 @@ import { calculateNextReview } from './utils/calculateNextReview';
     [words]
   );
 
-  // Покупка в магазине
+  // Покупка/активация предметов в магазине
   const purchaseItem = useCallback((item) => {
-    if (userStats.coins >= item.price && !userStats.purchasedItems.includes(item.id)) {
+    const isPurchased = userStats.purchasedItems.includes(item.id);
+
+    if (item.type === 'theme') {
+      if (!isPurchased) {
+        if (userStats.coins >= item.price) {
+          setUserStats(prev => ({
+            ...prev,
+            coins: prev.coins - item.price,
+            purchasedItems: [...prev.purchasedItems, item.id],
+            currentTheme: item.id
+          }));
+          alert(`✨ Успешно куплено: ${item.name}!`);
+        } else {
+          alert(`❌ Недостаточно монет! Нужно ещё ${item.price - userStats.coins} монет.`);
+        }
+      } else {
+        setUserStats(prev => ({
+          ...prev,
+          currentTheme: prev.currentTheme === item.id ? 'default' : item.id
+        }));
+      }
+      return;
+    }
+
+    if (userStats.coins >= item.price && !isPurchased) {
       setUserStats(prev => ({
         ...prev,
         coins: prev.coins - item.price,
         purchasedItems: [...prev.purchasedItems, item.id],
-        currentTheme: item.type === 'theme' ? item.id : prev.currentTheme,
         hintsRemaining: item.id === 'hint-pack' ? prev.hintsRemaining + 5 : prev.hintsRemaining,
         activeBoosts: item.type === 'boost' ? [...prev.activeBoosts, { id: item.id, expiresAt: Date.now() + 24 * 60 * 60 * 1000 }] : prev.activeBoosts
       }));
-      
       alert(`✨ Успешно куплено: ${item.name}!`);
-    } else if (userStats.coins < item.price) {
+    } else if (userStats.coins < item.price && !isPurchased) {
       alert(`❌ Недостаточно монет! Нужно ещё ${item.price - userStats.coins} монет.`);
     } else {
       alert('❌ Вы уже купили этот предмет!');
@@ -301,15 +343,12 @@ import { calculateNextReview } from './utils/calculateNextReview';
         ...prev,
         xp: prev.xp + (hasXPBoost ? 30 : 15),
         coins: prev.coins + (hasCoinBoost ? 20 : 10),
-        streak: prev.streak + 1,
         level: Math.floor((prev.xp + (hasXPBoost ? 30 : 15)) / 100) + 1,
-        totalReviews: prev.totalReviews + 1,
-        bestStreak: Math.max(prev.bestStreak, prev.streak + 1)
+        totalReviews: prev.totalReviews + 1
       }));
     } else {
       setUserStats(prev => ({
         ...prev,
-        streak: 0,
         totalReviews: prev.totalReviews + 1
       }));
     }
@@ -411,13 +450,17 @@ import { calculateNextReview } from './utils/calculateNextReview';
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {shopItems.map(item => (
+          {shopItems.map(item => {
+            const isPurchased = userStats.purchasedItems.includes(item.id);
+            return (
             <div
               key={item.id}
               className={`border-2 rounded-lg p-4 transition-all ${
-                userStats.purchasedItems.includes(item.id) 
-                  ? 'border-gray-300 bg-gray-50 opacity-50' 
-                  : 'border-gray-200 hover:border-blue-400 hover:shadow-lg'
+                item.type === 'theme'
+                  ? (userStats.currentTheme === item.id ? 'border-blue-400 shadow-lg' : 'border-gray-200 hover:border-blue-400 hover:shadow-lg')
+                  : isPurchased
+                    ? 'border-gray-300 bg-gray-50 opacity-50'
+                    : 'border-gray-200 hover:border-blue-400 hover:shadow-lg'
               }`}
             >
               <div className="flex items-start justify-between mb-2">
@@ -429,29 +472,29 @@ import { calculateNextReview } from './utils/calculateNextReview';
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between mt-4">
                 <div className="flex items-center gap-2">
                   <Coins className="w-4 h-4 text-yellow-600" />
                   <span className="font-bold">{item.price}</span>
                 </div>
-                
+
                 <button
                   onClick={() => purchaseItem(item)}
-                  disabled={userStats.purchasedItems.includes(item.id) || userStats.coins < item.price}
+                  disabled={!isPurchased && userStats.coins < item.price}
                   className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-                    userStats.purchasedItems.includes(item.id)
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : userStats.coins < item.price
+                    !isPurchased && userStats.coins < item.price
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-blue-500 text-white hover:bg-blue-600'
                   }`}
                 >
-                  {userStats.purchasedItems.includes(item.id) ? 'Куплено' : 'Купить'}
+                  {item.type === 'theme'
+                    ? (isPurchased ? (userStats.currentTheme === item.id ? 'Выключить' : 'Включить') : 'Купить')
+                    : (isPurchased ? 'Куплено' : 'Купить')}
                 </button>
               </div>
             </div>
-          ))}
+          );})}
         </div>
       </div>
       
@@ -1086,45 +1129,42 @@ import { calculateNextReview } from './utils/calculateNextReview';
         </button>
       </div>
       
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {filteredWords.map(word => (
           <div
             key={word.id}
-            className="bg-white rounded-lg shadow p-4 flex items-center justify-between hover:shadow-lg transition-shadow"
+            className="bg-white rounded-lg shadow p-4 flex flex-col items-center hover:shadow-lg transition-shadow"
           >
-            <div className="flex items-center gap-4">
-                            {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
+            <div className="mb-2">
+              {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
                 <img
                   src={word.image}
                   alt={word.english}
-                  className="w-10 h-10 object-cover rounded"
+                  className="w-12 h-12 object-cover rounded"
                 />
               ) : (
                 <span className="text-3xl">{word.image}</span>
               )}
-              <div>
-                <h3 className="font-bold text-lg">{word.english}</h3>
-                <p className="text-gray-600">{word.russian}</p>
-                <div className="flex gap-2 mt-1">
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    word.status === 'mastered' ? 'bg-green-100 text-green-700' :
-                    word.status === 'learning' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-gray-100 text-gray-700'
-                  }`}>
-                    {word.status === 'mastered' ? 'Изучено' :
-                     word.status === 'learning' ? 'Изучается' : 'Новое'}
-                  </span>
-                  <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
-                    {word.category}
-                  </span>
-                  <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700">
-                    Повтор {formatDate(word.nextReview)}
-                  </span>
-                </div>
-              </div>
             </div>
-            
-            <div className="flex gap-2">
+            <h3 className="font-bold text-lg text-center">{word.english}</h3>
+            <p className="text-gray-600 text-center">{word.russian}</p>
+            <div className="flex gap-2 mt-2 flex-wrap justify-center">
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                word.status === 'mastered' ? 'bg-green-100 text-green-700' :
+                word.status === 'learning' ? 'bg-yellow-100 text-yellow-700' :
+                'bg-gray-100 text-gray-700'
+              }`}>
+                {word.status === 'mastered' ? 'Изучено' :
+                 word.status === 'learning' ? 'Изучается' : 'Новое'}
+              </span>
+              <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                {word.category}
+              </span>
+              <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700">
+                Повтор {formatDate(word.nextReview)}
+              </span>
+            </div>
+            <div className="flex gap-2 mt-2">
               <button
                 onClick={() => toggleStar(word.id)}
                 className={`p-2 rounded-full transition-colors ${
@@ -1152,6 +1192,35 @@ import { calculateNextReview } from './utils/calculateNextReview';
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+
+  // Модальное окно со списком слов
+  const WordListModal = ({ modal, onClose }) => (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">{modal.title}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <ul className="space-y-2">
+          {modal.words.map(w => (
+            <li key={w.id} className="flex items-center gap-3">
+              {typeof w.image === 'string' && (w.image.startsWith('http') || w.image.startsWith('data:')) ? (
+                <img src={w.image} alt={w.english} className="w-8 h-8 object-cover rounded" />
+              ) : (
+                <span className="text-2xl">{w.image}</span>
+              )}
+              <div>
+                <p className="font-semibold">{w.english}</p>
+                <p className="text-sm text-gray-600">{w.russian}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
@@ -1222,31 +1291,43 @@ import { calculateNextReview } from './utils/calculateNextReview';
 
         {/* Статистика слов */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl p-4 shadow-lg">
+          <div
+            className="bg-white rounded-xl p-4 shadow-lg cursor-pointer hover:shadow-xl"
+            onClick={() => setWordListModal({ title: 'Все слова', words })}
+          >
             <div className="flex items-center justify-between mb-2">
               <BookOpen className="w-8 h-8 text-blue-500" />
               <span className="text-2xl font-bold">{words.length}</span>
             </div>
             <p className="text-gray-600">Всего слов</p>
           </div>
-          
-          <div className="bg-white rounded-xl p-4 shadow-lg">
+
+          <div
+            className="bg-white rounded-xl p-4 shadow-lg cursor-pointer hover:shadow-xl"
+            onClick={() => setWordListModal({ title: 'Слова к повторению', words: wordsToReview })}
+          >
             <div className="flex items-center justify-between mb-2">
               <Clock className="w-8 h-8 text-red-500" />
               <span className="text-2xl font-bold">{wordsToReview.length}</span>
             </div>
             <p className="text-gray-600">К повторению</p>
           </div>
-          
-          <div className="bg-white rounded-xl p-4 shadow-lg">
+
+          <div
+            className="bg-white rounded-xl p-4 shadow-lg cursor-pointer hover:shadow-xl"
+            onClick={() => setWordListModal({ title: 'Изучаются', words: words.filter(w => w.status === 'learning') })}
+          >
             <div className="flex items-center justify-between mb-2">
               <Target className="w-8 h-8 text-yellow-500" />
               <span className="text-2xl font-bold">{words.filter(w => w.status === 'learning').length}</span>
             </div>
             <p className="text-gray-600">Изучается</p>
           </div>
-          
-          <div className="bg-white rounded-xl p-4 shadow-lg">
+
+          <div
+            className="bg-white rounded-xl p-4 shadow-lg cursor-pointer hover:shadow-xl"
+            onClick={() => setWordListModal({ title: 'Изучено', words: words.filter(w => w.status === 'mastered') })}
+          >
             <div className="flex items-center justify-between mb-2">
               <Award className="w-8 h-8 text-green-500" />
               <span className="text-2xl font-bold">{words.filter(w => w.status === 'mastered').length}</span>
@@ -1438,6 +1519,9 @@ import { calculateNextReview } from './utils/calculateNextReview';
         {currentView === 'training' && <TrainingComponent />}
       </div>
       
+      {wordListModal && (
+        <WordListModal modal={wordListModal} onClose={() => setWordListModal(null)} />
+      )}
       {/* Форма добавления слова */}
       {showAddWordForm && (
         <AddWordForm

@@ -7,7 +7,7 @@ import { loadSavedData, saveWords, saveStats } from './utils/storage';
 import { formatDate } from './utils/formatDate';
 import { calculateNextReview } from './utils/calculateNextReview';
 
-const EnglishLearningApp = () => {
+  const App = () => {
   const savedData = loadSavedData(initialWords);
   const [words, setWords] = useState(savedData.words);
   const [currentView, setCurrentView] = useState('dashboard');
@@ -29,7 +29,7 @@ const EnglishLearningApp = () => {
     english: '',
     russian: '',
     category: '',
-    image: '',
+    image: '📝',
     examples: ['', ''],
     pronunciation: ''
   });
@@ -1454,4 +1454,4 @@ const EnglishLearningApp = () => {
   );
 };
 
-export default EnglishLearningApp;
+export default App;

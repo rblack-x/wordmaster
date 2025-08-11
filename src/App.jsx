@@ -249,40 +249,22 @@ import { calculateNextReview } from './utils/calculateNextReview';
     }
   }, [newWord]);
 
-  // Начать тренировку
-  const startTraining = useCallback((mode) => {
-    setTrainingMode(mode);
-    const wordsForTraining = words.filter(w => w.status !== 'mastered').slice(0, 10);
-    
-    if (wordsForTraining.length === 0) {
-      alert('Нет слов для тренировки! Добавьте новые слова или сбросьте прогресс существующих.');
-      return;
-    }
-    
-    setTrainingWords(wordsForTraining);
-    generateQuestion(wordsForTraining, mode);
-    setCurrentView('training');
-    setUserInput('');
-    setShowHint(false);
-    setSelectedLetters([]);
-  }, [words, generateQuestion]);
-
   // Генерация вопроса для тренажера
   const generateQuestion = useCallback((wordsPool, mode) => {
     if (wordsPool.length === 0) return;
-    
+
     const correctWord = wordsPool[Math.floor(Math.random() * wordsPool.length)];
-    
+
     if (mode === 'multiple-choice-en-ru' || mode === 'multiple-choice-ru-en') {
       const otherWords = words.filter(w => w.id !== correctWord.id);
       const wrongAnswers = [];
-      
+
       for (let i = 0; i < 3 && i < otherWords.length; i++) {
         wrongAnswers.push(otherWords[Math.floor(Math.random() * otherWords.length)]);
       }
-      
+
       const allAnswers = [correctWord, ...wrongAnswers].sort(() => Math.random() - 0.5);
-      
+
       setCurrentQuestion({
         word: correctWord,
         answers: allAnswers,
@@ -313,10 +295,28 @@ import { calculateNextReview } from './utils/calculateNextReview';
         hint: correctWord.english[0].toUpperCase() + '_'.repeat(correctWord.english.length - 1)
       });
     }
-    
+
     setSelectedAnswer(null);
     setShowResult(false);
   }, [words]);
+
+  // Начать тренировку
+  const startTraining = useCallback((mode) => {
+    setTrainingMode(mode);
+    const wordsForTraining = words.filter(w => w.status !== 'mastered').slice(0, 10);
+
+    if (wordsForTraining.length === 0) {
+      alert('Нет слов для тренировки! Добавьте новые слова или сбросьте прогресс существующих.');
+      return;
+    }
+
+    setTrainingWords(wordsForTraining);
+    generateQuestion(wordsForTraining, mode);
+    setCurrentView('training');
+    setUserInput('');
+    setShowHint(false);
+    setSelectedLetters([]);
+  }, [words, generateQuestion]);
 
   // Проверка ответа в тренажере
   const checkAnswer = useCallback((answer) => {

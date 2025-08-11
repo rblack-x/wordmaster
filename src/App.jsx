@@ -1,159 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { BookOpen, Trophy, Star, Clock, Target, Award, Zap, ChevronRight, X, Check, RotateCcw, Volume2, Heart, Flame, Plus, Edit2, Trash2, Save, Shuffle, PenTool, Headphones, Eye, Keyboard, ShoppingCart, BarChart3, TrendingUp, Calendar, Info, Coins, Sparkles, Palette, Music, Rocket } from 'lucide-react';
 import AddWordForm from './AddWordForm';
+import { initialWords } from './data/initialWords';
+import { shopItems } from './data/shopItems';
+import { loadSavedData, saveWords, saveStats } from './utils/storage';
+import { formatDate } from './utils/formatDate';
+import { calculateNextReview } from './utils/calculateNextReview';
 
 const EnglishLearningApp = () => {
-  // Начальная база слов с категориями
-  const initialWords = [
-    {
-      id: 1,
-      english: 'Adventure',
-      russian: 'Приключение',
-      category: 'Путешествия',
-      image: '🗺️',
-      examples: ['Life is an adventure', 'We went on an adventure'],
-      pronunciation: 'əd-ˈven-chər',
-      difficulty: 1,
-      nextReview: new Date().getTime(),
-      reviewCount: 0,
-      correctCount: 0,
-      starred: false,
-      status: 'new',
-      createdAt: new Date().getTime(),
-      lastReviewed: null
-    },
-    {
-      id: 2,
-      english: 'Mountain',
-      russian: 'Гора',
-      category: 'Природа',
-      image: '⛰️',
-      examples: ['The mountain is very high', 'We climbed the mountain'],
-      pronunciation: 'ˈmaʊn-tən',
-      difficulty: 1,
-      nextReview: new Date().getTime(),
-      reviewCount: 0,
-      correctCount: 0,
-      starred: false,
-      status: 'new',
-      createdAt: new Date().getTime(),
-      lastReviewed: null
-    },
-    {
-      id: 3,
-      english: 'Happiness',
-      russian: 'Счастье',
-      category: 'Эмоции',
-      image: '😊',
-      examples: ['Happiness is a choice', 'She found happiness in small things'],
-      pronunciation: 'ˈhæp-i-nəs',
-      difficulty: 2,
-      nextReview: new Date().getTime(),
-      reviewCount: 0,
-      correctCount: 0,
-      starred: false,
-      status: 'new',
-      createdAt: new Date().getTime(),
-      lastReviewed: null
-    },
-    {
-      id: 4,
-      english: 'Knowledge',
-      russian: 'Знание',
-      category: 'Образование',
-      image: '📚',
-      examples: ['Knowledge is power', 'He has vast knowledge'],
-      pronunciation: 'ˈnɒl-ɪdʒ',
-      difficulty: 2,
-      nextReview: new Date().getTime(),
-      reviewCount: 0,
-      correctCount: 0,
-      starred: false,
-      status: 'new',
-      createdAt: new Date().getTime(),
-      lastReviewed: null
-    },
-    {
-      id: 5,
-      english: 'Ocean',
-      russian: 'Океан',
-      category: 'Природа',
-      image: '🌊',
-      examples: ['The ocean is deep', 'We sailed across the ocean'],
-      pronunciation: 'ˈoʊ-ʃən',
-      difficulty: 1,
-      nextReview: new Date().getTime(),
-      reviewCount: 0,
-      correctCount: 0,
-      starred: false,
-      status: 'new',
-      createdAt: new Date().getTime(),
-      lastReviewed: null
-    }
-  ];
-
-  // Магазин улучшений
-  const shopItems = [
-    { id: 'theme-dark', name: 'Тёмная тема', icon: '🌙', price: 50, type: 'theme', description: 'Приятная для глаз тёмная тема' },
-    { id: 'theme-ocean', name: 'Океанская тема', icon: '🌊', price: 75, type: 'theme', description: 'Освежающие океанские цвета' },
-    { id: 'theme-forest', name: 'Лесная тема', icon: '🌲', price: 75, type: 'theme', description: 'Спокойные зелёные тона' },
-    { id: 'boost-xp', name: 'XP Бустер', icon: '⚡', price: 100, type: 'boost', description: 'x2 XP на 24 часа' },
-    { id: 'boost-coins', name: 'Монетный магнит', icon: '🧲', price: 150, type: 'boost', description: 'x2 монет на 24 часа' },
-    { id: 'hint-pack', name: 'Пакет подсказок', icon: '💡', price: 30, type: 'consumable', description: '+5 подсказок для тренировок' },
-    { id: 'streak-freeze', name: 'Заморозка серии', icon: '🧊', price: 200, type: 'consumable', description: 'Сохранить серию при пропуске дня' },
-    { id: 'unlock-category', name: 'Новая категория', icon: '📦', price: 300, type: 'unlock', description: 'Разблокировать премиум категорию' }
-  ];
-
-  // Загрузка сохраненных данных из localStorage
-  const loadSavedData = () => {
-    try {
-      const savedWords = localStorage.getItem('wordmaster_words');
-      const savedStats = localStorage.getItem('wordmaster_stats');
-      
-      return {
-        words: savedWords ? JSON.parse(savedWords) : initialWords,
-        stats: savedStats ? JSON.parse(savedStats) : {
-          level: 1,
-          xp: 0,
-          streak: 1,
-          totalWords: 0,
-          masteredWords: 0,
-          coins: 100,
-          hintsRemaining: 3,
-          purchasedItems: [],
-          activeBoosts: [],
-          currentTheme: 'default',
-          totalReviews: 0,
-          perfectDays: 0,
-          bestStreak: 1,
-          startDate: new Date().getTime()
-        }
-      };
-    } catch (error) {
-      console.error('Error loading saved data:', error);
-      return {
-        words: initialWords,
-        stats: {
-          level: 1,
-          xp: 0,
-          streak: 1,
-          totalWords: 0,
-          masteredWords: 0,
-          coins: 100,
-          hintsRemaining: 3,
-          purchasedItems: [],
-          activeBoosts: [],
-          currentTheme: 'default',
-          totalReviews: 0,
-          perfectDays: 0,
-          bestStreak: 1,
-          startDate: new Date().getTime()
-        }
-      };
-    }
-  };
-
-  const savedData = loadSavedData();
+  const savedData = loadSavedData(initialWords);
   const [words, setWords] = useState(savedData.words);
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -180,23 +35,17 @@ const EnglishLearningApp = () => {
   });
 
   // Список эмодзи для выбора
-  const emojiList = ['📝', '🌟', '🌈', '🔥', '💡', '🎨', '🎭', '🎪', '🎯', '🎲', '🎸', '🎹', '🏆', '🚀', '✨', '💎', '🌺', '🌸', '🌼', '🌻', '🌷', '🌹', '🍀', '🌲', '🌳', '🌴', '🌵', '🌊', '⛰️', '🏔️', '🌋', '🏝️', '🏖️', '🌅', '🌄', '🌠', '🌌', '☀️', '🌙', '⭐', '☁️', '⛅', '🌤️', '🌥️', '🌦️', '🌧️', '⛈️', '❄️', '☃️', '🌨️'];
+  const emojiList = ['📝', '🌟', '🌈', '🔥', '💡', '🎨', '🎭', '🎪', '🎯', '🎲', '🎸', '🎹', '🏆', '🚀', '✨', '💎', '🌺', '🌸',
+ '🌼', '🌻', '🌷', '🌹', '🍀', '🌲', '🌳', '🌴', '🌵', '🌊', '⛰️', '🏔️', '🌋', '🏝️', '🏖️', '🌅', '🌄', '🌠', '🌌', '☀️', '🌙', '⭐',
+ '☁️', '⛅', '🌤️', '🌥️', '🌦️', '🌧️', '⛈️', '❄️', '☃️', '🌨️'];
 
   // Сохранение данных в localStorage
   useEffect(() => {
-    try {
-      localStorage.setItem('wordmaster_words', JSON.stringify(words));
-    } catch (error) {
-      console.error('Error saving words:', error);
-    }
+    saveWords(words);
   }, [words]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('wordmaster_stats', JSON.stringify(userStats));
-    } catch (error) {
-      console.error('Error saving stats:', error);
-    }
+    saveStats(userStats);
   }, [userStats]);
 
   // Получить уникальные категории
@@ -210,66 +59,11 @@ const EnglishLearningApp = () => {
     [words, selectedCategory]
   );
 
-  // Форматирование даты для отображения
-  const formatDate = (timestamp) => {
-    if (!timestamp) return 'Никогда';
-    const now = new Date();
-    const date = new Date(timestamp);
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-    const diffMinutes = Math.floor(diffTime / (1000 * 60));
-    
-    if (diffDays > 0) {
-      if (date > now) {
-        return `через ${diffDays} ${diffDays === 1 ? 'день' : diffDays < 5 ? 'дня' : 'дней'}`;
-      }
-      return `${diffDays} ${diffDays === 1 ? 'день' : diffDays < 5 ? 'дня' : 'дней'} назад`;
-    } else if (diffHours > 0) {
-      if (date > now) {
-        return `через ${diffHours} ${diffHours === 1 ? 'час' : diffHours < 5 ? 'часа' : 'часов'}`;
-      }
-      return `${diffHours} ${diffHours === 1 ? 'час' : diffHours < 5 ? 'часа' : 'часов'} назад`;
-    } else if (diffMinutes > 0) {
-      if (date > now) {
-        return `через ${diffMinutes} ${diffMinutes === 1 ? 'минуту' : diffMinutes < 5 ? 'минуты' : 'минут'}`;
-      }
-      return `${diffMinutes} ${diffMinutes === 1 ? 'минуту' : diffMinutes < 5 ? 'минуты' : 'минут'} назад`;
-    }
-    return 'только что';
-  };
-
   // Слова для повторения (по алгоритму интервального повторения)
   const wordsToReview = useMemo(() => 
     words.filter(w => w.nextReview <= new Date().getTime() && w.status !== 'mastered'),
     [words]
   );
-
-  // Интервальное повторение (алгоритм SM-2 упрощенный)
-  const calculateNextReview = useCallback((word, correct) => {
-    const intervals = [
-      1000 * 60 * 10,        // 10 минут
-      1000 * 60 * 60,        // 1 час
-      1000 * 60 * 60 * 6,    // 6 часов
-      1000 * 60 * 60 * 24,   // 1 день
-      1000 * 60 * 60 * 24 * 3,  // 3 дня
-      1000 * 60 * 60 * 24 * 7,  // 7 дней
-      1000 * 60 * 60 * 24 * 14, // 14 дней
-      1000 * 60 * 60 * 24 * 30, // 30 дней
-      1000 * 60 * 60 * 24 * 90  // 90 дней
-    ];
-    
-    let nextInterval;
-    
-    if (correct) {
-      const nextIndex = Math.min(word.correctCount, intervals.length - 1);
-      nextInterval = intervals[nextIndex];
-    } else {
-      nextInterval = intervals[0]; // Если ошибка, повторить через 10 минут
-    }
-    
-    return new Date().getTime() + nextInterval;
-  }, []);
 
   // Покупка в магазине
   const purchaseItem = useCallback((item) => {
@@ -359,7 +153,7 @@ const EnglishLearningApp = () => {
         setCurrentCardIndex(0);
       }
     }, 1000);
-  }, [words, filteredWords, currentCardIndex, userStats.activeBoosts, calculateNextReview]);
+  }, [words, filteredWords, currentCardIndex, userStats.activeBoosts]);
 
   // Переключение закрепленных слов
   const toggleStar = useCallback((wordId) => {
@@ -429,7 +223,7 @@ const EnglishLearningApp = () => {
     setUserInput('');
     setShowHint(false);
     setSelectedLetters([]);
-  }, [words]);
+  }, [words, generateQuestion]);
 
   // Генерация вопроса для тренажера
   const generateQuestion = useCallback((wordsPool, mode) => {
@@ -548,7 +342,7 @@ const EnglishLearningApp = () => {
         setCurrentView('dashboard');
       }
     }, 2000);
-  }, [trainingMode, currentQuestion, userInput, selectedLetters, userStats.activeBoosts, trainingWords, calculateNextReview, generateQuestion]);
+  }, [trainingMode, currentQuestion, userInput, selectedLetters, userStats.activeBoosts, trainingWords,  generateQuestion]);
 
   // Использовать подсказку
   const useHint = useCallback(() => {

@@ -39,6 +39,23 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
   const [trainingType, setTrainingType] = useState('zapominanie');
   const [trainingStats, setTrainingStats] = useState({ correct: 0, incorrect: 0, results: [] });
   const trainingStartLevels = useRef({});
+  const playSound = useCallback((success) => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = success ? 800 : 200;
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start();
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
+      oscillator.stop(ctx.currentTime + 0.3);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
   const [timeLeft, setTimeLeft] = useState(null);
   const [showAddWordForm, setShowAddWordForm] = useState(false);
   const [wordListModal, setWordListModal] = useState(null);
@@ -58,8 +75,6 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
     let level = word.level ?? 0;
     if (correct && intervalPassed) {
       level = Math.min(level + 1, maxLevel);
-    } else if (!correct) {
-      level = 0;
     }
     const nextReview = (!correct || intervalPassed) ? calculateNextReview(level) : word.nextReview;
     const status = level >= maxLevel ? 'mastered' : level > 0 ? 'learning' : 'new';
@@ -451,16 +466,11 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
     }
 
     setShowResult(true);
+    playSound(correct);
 
     // Проверка активных бустов
     const hasXPBoost = userStats.activeBoosts.some(b => b.id === 'boost-xp' && b.expiresAt > Date.now());
     const hasCoinBoost = userStats.activeBoosts.some(b => b.id === 'boost-coins' && b.expiresAt > Date.now());
-
-    setTrainingStats(prev => ({
-      ...prev,
-      correct: prev.correct + (correct ? 1 : 0),
-      incorrect: prev.incorrect + (correct ? 0 : 1)
-    }));
 
     if (correct) {
       setUserStats(prev => ({
@@ -488,7 +498,10 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
         setWords(w => w.map(word => word.id === wordId ? updatedWord : word));
         setTrainingStats(prev => ({
           ...prev,
+          correct: prev.correct + (newCorrectValue ? 1 : 0),
+          incorrect: prev.incorrect + (newCorrectValue ? 0 : 1),
           results: [...prev.results, {
+            id: updatedWord.id,
             word: updatedWord.english,
             level: updatedWord.level,
             levelUp: updatedWord.level - (trainingStartLevels.current[wordId] || 0),
@@ -498,7 +511,9 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
       } else {
         setTrainingStats(prev => ({
           ...prev,
-          results: [...prev.results, { word: currentQuestion.word.english, correct: newCorrectValue }]
+          correct: prev.correct + (newCorrectValue ? 1 : 0),
+          incorrect: prev.incorrect + (newCorrectValue ? 0 : 1),
+          results: [...prev.results, { id: wordId, word: currentQuestion.word.english, correct: newCorrectValue }]
         }));
       }
       setTrainingWords(words => words.filter(w => w.id !== wordId));
@@ -516,7 +531,7 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
         setCurrentView('trainingSummary');
       }
     }, 2000);
-  }, [currentQuestion, userInput, selectedLetters, userStats.activeBoosts, wordCorrectMap, trainingQueue, taskIndex, updateWordProgress, generateQuestion, trainingType]);
+  }, [currentQuestion, userInput, selectedLetters, userStats.activeBoosts, wordCorrectMap, trainingQueue, taskIndex, updateWordProgress, generateQuestion, trainingType, playSound]);
 
   const checkAnswerRef = useRef(checkAnswer);
   useEffect(() => { checkAnswerRef.current = checkAnswer; }, [checkAnswer]);
@@ -1317,47 +1332,80 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
     return null;
   };
 
-  const TrainingSummary = () => (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
-        <h2 className="text-2xl font-bold mb-4">Результаты</h2>
-        <p className="mb-1">Правильно: {trainingStats.correct}</p>
-        <p className="mb-4">Ошибок: {trainingStats.incorrect}</p>
-        {trainingType === 'zapominanie' && (
-          <div className="text-left">
-            <h3 className="font-semibold mb-2">Прогресс слов:</h3>
-            <ul className="list-disc pl-5 space-y-1">
-              {trainingStats.results.map(r => (
-                <li key={r.word}>
-                  {r.word} — уровень {r.level}
-                  {r.levelUp > 0 ? ` (+${r.levelUp})` : ''}
-                  {r.learned ? ' ⭐' : ''}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {trainingType === 'jam' && (
-          <div className="text-left">
-            <h3 className="font-semibold mb-2">Слова:</h3>
-            <ul className="list-disc pl-5 space-y-1">
-              {trainingStats.results.map(r => (
-                <li key={r.word}>
-                  {r.word} — {r.correct ? '✅' : '❌'}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        <button
-          onClick={() => setCurrentView('dashboard')}
-          className="mt-6 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
-        >
-          На главную
-        </button>
+  const TrainingSummary = () => {
+    useEffect(() => {
+      const colors = ['#bb0000', '#ffffff', '#3333ff', '#00bb00', '#ffbb00', '#ff00bb'];
+      const pieces = 100;
+      for (let i = 0; i < pieces; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = Math.random() * 100 + '%';
+        piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.setProperty('--end-x', (Math.random() * 200 - 100) + 'vw');
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 3000);
+      }
+    }, []);
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4">Результаты</h2>
+          <p className="mb-1">Правильно: {trainingStats.correct} слов</p>
+          <p className="mb-4">Ошибок: {trainingStats.incorrect}</p>
+          {trainingType === 'zapominanie' && (
+            <div className="text-left">
+              <h3 className="font-semibold mb-2">Прогресс слов:</h3>
+              <ul className="list-disc pl-5 space-y-1">
+                {trainingStats.results.map(r => {
+                  const wordObj = words.find(w => w.id === r.id);
+                  return (
+                    <li key={r.id}>
+                      <button
+                        onClick={() => wordObj && setSelectedWord(wordObj)}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {r.word}
+                      </button>
+                      {' '}— уровень {r.level}
+                      {r.levelUp > 0 ? ` (+${r.levelUp})` : ''}
+                      {r.learned ? ' ⭐' : ''}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          {trainingType === 'jam' && (
+            <div className="text-left">
+              <h3 className="font-semibold mb-2">Слова:</h3>
+              <ul className="list-disc pl-5 space-y-1">
+                {trainingStats.results.map(r => {
+                  const wordObj = words.find(w => w.id === r.id);
+                  return (
+                    <li key={r.id}>
+                      <button
+                        onClick={() => wordObj && setSelectedWord(wordObj)}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {r.word}
+                      </button>
+                      {' '}— {r.correct ? '✅' : '❌'}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="mt-6 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+          >
+            На главную
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Компонент списка слов
   // Модальное окно со списком слов

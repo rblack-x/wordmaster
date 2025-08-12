@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, ChevronRight, Plus, LayoutGrid, List } from 'lucide-react';
+import { Trash2, ChevronRight, Plus, LayoutGrid, List, FolderPlus } from 'lucide-react';
 import { formatDate } from './utils/formatDate';
 
 const WordsList = ({
@@ -15,13 +15,16 @@ const WordsList = ({
   setShowAnswer,
   setShowAddWordForm,
   onWordClick,
+  addCategory,
 }) => {
   const [viewMode, setViewMode] = useState('grid');
 
   const renderGridItem = (word) => {
-    const repeatText = word.nextReview > Date.now()
-      ? `Будет доступно ${formatDate(word.nextReview)}`
-      : 'Доступно';
+    const isAvailable = word.nextReview <= Date.now();
+    const repeatText = isAvailable
+      ? 'Доступно'
+      : `Будет доступно ${formatDate(word.nextReview)}`;
+    const repeatClass = isAvailable ? 'badge-available' : 'badge-repeat';
     return (
       <div
         key={word.id}
@@ -49,7 +52,7 @@ const WordsList = ({
               {word.status === 'mastered' ? 'Изучено' : 'Новое'}
             </span>
           )}
-          <span className="badge-base badge-repeat">{repeatText}</span>
+          <span className={`badge-base ${repeatClass}`}>{repeatText}</span>
         </div>
         <div className="word-actions justify-center">
           <button
@@ -79,9 +82,11 @@ const WordsList = ({
   };
 
   const renderListItem = (word) => {
-    const repeatText = word.nextReview > Date.now()
-      ? `Будет доступно ${formatDate(word.nextReview)}`
-      : 'Доступно';
+    const isAvailable = word.nextReview <= Date.now();
+    const repeatText = isAvailable
+      ? 'Доступно'
+      : `Будет доступно ${formatDate(word.nextReview)}`;
+    const repeatClass = isAvailable ? 'badge-available' : 'badge-repeat';
     return (
       <div
         key={word.id}
@@ -96,49 +101,45 @@ const WordsList = ({
               <span className="text-2xl grid place-items-center h-full w-full">{word.image}</span>
             )}
           </div>
-          <div className="min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             <h3 className="word-title truncate">{word.english}</h3>
             <p className="word-subtitle truncate">{word.russian}</p>
           </div>
         </div>
         <div className="word-right">
-          <div className="flex items-center justify-center gap-2 self-center w-full">
+          <div className="flex items-center gap-2">
             <div className="progress-bar">
               <div className="progress-bar-fill" style={{ width: `${(word.level / maxLevel) * 100}%` }} />
             </div>
             <span className="text-xs text-slate-500">{word.level}/{maxLevel}</span>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {word.status !== 'learning' && (
-              <span className={`badge-base badge-status-${word.status}`}>
-                {word.status === 'mastered' ? 'Изучено' : 'Новое'}
-              </span>
-            )}
-            <span className="badge-base badge-repeat">{repeatText}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteWord(word.id);
-              }}
-              className="icon-btn icon-danger"
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="word-actions">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setCurrentCardIndex(filteredWords.findIndex(w => w.id === word.id));
-                setReviewWords(filteredWords);
-                setCurrentView('cards');
-                setShowAnswer(false);
-              }}
-              className="icon-btn icon-primary"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+          {word.status !== 'learning' && (
+            <span className={`badge-base badge-status-${word.status}`}>
+              {word.status === 'mastered' ? 'Изучено' : 'Новое'}
+            </span>
+          )}
+          <span className={`badge-base ${repeatClass}`}>{repeatText}</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteWord(word.id);
+            }}
+            className="icon-btn icon-danger"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setCurrentCardIndex(filteredWords.findIndex(w => w.id === word.id));
+              setReviewWords(filteredWords);
+              setCurrentView('cards');
+              setShowAnswer(false);
+            }}
+            className="icon-btn icon-primary"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
       </div>
     );
@@ -148,7 +149,7 @@ const WordsList = ({
     <div className="word-page">
       <div className="max-w-4xl mx-auto p-6">
         <div className="mb-6 flex justify-between items-center">
-          <div>
+          <div className="flex items-center gap-2">
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -160,6 +161,12 @@ const WordsList = ({
                 </option>
               ))}
             </select>
+            <button
+              onClick={addCategory}
+              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+            >
+              <FolderPlus className="w-5 h-5" />
+            </button>
           </div>
 
           <div className="flex items-center gap-2">

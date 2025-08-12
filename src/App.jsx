@@ -1120,53 +1120,36 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
 
     const renderGridItem = (word) => (
       <div key={word.id} className="word-card-grid">
-        <div className="mb-2">
+        <div className="word-media mx-auto">
           {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
-            <img
-              src={word.image}
-              alt={word.english}
-              className="w-12 h-12 object-cover rounded"
-            />
+            <img src={word.image} alt={word.english} className="h-full w-full object-cover" />
           ) : (
-            <span className="text-3xl">{word.image}</span>
+            <span className="text-3xl grid place-items-center h-full w-full">{word.image}</span>
           )}
         </div>
-        <h3 className="font-bold text-lg text-center">{word.english}</h3>
-        <p className="text-gray-600 text-center">{word.russian}</p>
-        <div className="flex items-center gap-2 mt-1">
+        <h3 className="word-title text-center">{word.english}</h3>
+        <p className="word-subtitle text-center">{word.russian}</p>
+        <div className="flex items-center gap-2">
           <div className="progress-bar">
             <div className="progress-bar-fill" style={{ width: `${(word.level / maxLevel) * 100}%` }} />
           </div>
-          <span className="text-xs text-gray-500">{word.level}/{maxLevel}</span>
+          <span className="text-xs text-slate-500">{word.level}/{maxLevel}</span>
         </div>
-        <div className="flex gap-2 mt-2 flex-wrap justify-center">
-          <span className={`badge-base ${
-            word.status === 'mastered' ? 'bg-green-100 text-green-700' :
-            word.status === 'learning' ? 'bg-yellow-100 text-yellow-700' :
-            'bg-gray-100 text-gray-700'
-          }`}>
-            {word.status === 'mastered' ? 'Изучено' :
-             word.status === 'learning' ? 'Изучается' : 'Новое'}
-          </span>
-          <span className="badge-base bg-blue-100 text-blue-700">
-            {word.category}
-          </span>
-          <span className="badge-base bg-purple-100 text-purple-700">
-            Повтор {formatDate(word.nextReview)}
-          </span>
+        <div className="flex flex-wrap justify-center gap-2">
+          <span className={`badge-base badge-status-${word.status}`}>{word.status === 'mastered' ? 'Изучено' : word.status === 'learning' ? 'Изучается' : 'Новое'}</span>
+          <span className="badge-base badge-cat">{word.category}</span>
+          <span className="badge-base badge-repeat">Повтор {formatDate(word.nextReview)}</span>
         </div>
-        <div className="flex gap-2 mt-2">
+        <div className="word-actions justify-center">
           <button
             onClick={() => toggleStar(word.id)}
-            className={`p-2 rounded-full transition-colors ${
-              word.starred ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400'
-            }`}
+            className={`icon-btn ${word.starred ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' : ''}`}
           >
             <Star className={`w-5 h-5 ${word.starred ? 'fill-current' : ''}`} />
           </button>
           <button
             onClick={() => deleteWord(word.id)}
-            className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+            className="icon-btn icon-danger"
           >
             <Trash2 className="w-5 h-5" />
           </button>
@@ -1177,7 +1160,7 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
               setCurrentView('cards');
               setShowAnswer(false);
             }}
-            className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+            className="icon-btn icon-primary"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
@@ -1187,65 +1170,63 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
 
     const renderListItem = (word) => (
       <div key={word.id} className="word-card-list">
-        <div className="flex items-center gap-3">
-          {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
-            <img src={word.image} alt={word.english} className="w-12 h-12 object-cover rounded" />
-          ) : (
-            <span className="text-3xl">{word.image}</span>
-          )}
-          <div>
-            <h3 className="font-bold text-lg">{word.english}</h3>
-            <p className="text-gray-600">{word.russian}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="progress-bar">
-                <div className="progress-bar-fill" style={{ width: `${(word.level / maxLevel) * 100}%` }} />
-              </div>
-              <span className="text-xs text-gray-500">{word.level}/{maxLevel}</span>
-            </div>
+        <div className="word-left">
+          <div className="word-media">
+            {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
+              <img src={word.image} alt={word.english} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-2xl grid place-items-center h-full w-full">{word.image}</span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <h3 className="word-title truncate">{word.english}</h3>
+            <p className="word-subtitle truncate">{word.russian}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`badge-base ${
-            word.status === 'mastered' ? 'bg-green-100 text-green-700' :
-            word.status === 'learning' ? 'bg-yellow-100 text-yellow-700' :
-            'bg-gray-100 text-gray-700'
-          }`}>
-            {word.status === 'mastered' ? 'Изучено' :
-             word.status === 'learning' ? 'Изучается' : 'Новое'}
-          </span>
-          <span className="badge-base bg-blue-100 text-blue-700">{word.category}</span>
-          <span className="badge-base bg-purple-100 text-purple-700">Повтор {formatDate(word.nextReview)}</span>
-          <button
-            onClick={() => toggleStar(word.id)}
-            className={`p-2 rounded-full transition-colors ${
-              word.starred ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400'
-            }`}
-          >
-            <Star className={`w-5 h-5 ${word.starred ? 'fill-current' : ''}`} />
-          </button>
-          <button
-            onClick={() => deleteWord(word.id)}
-            className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => {
-              setCurrentCardIndex(filteredWords.findIndex(w => w.id === word.id));
-              setReviewWords(filteredWords);
-              setCurrentView('cards');
-              setShowAnswer(false);
-            }}
-            className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+        <div className="word-right">
+          <div className="flex flex-wrap justify-end gap-2">
+            <span className={`badge-base badge-status-${word.status}`}>{word.status === 'mastered' ? 'Изучено' : word.status === 'learning' ? 'Изучается' : 'Новое'}</span>
+            <span className="badge-base badge-cat">{word.category}</span>
+            <span className="badge-base badge-repeat">Повтор {formatDate(word.nextReview)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="progress-bar">
+              <div className="progress-bar-fill" style={{ width: `${(word.level / maxLevel) * 100}%` }} />
+            </div>
+            <span className="text-xs text-slate-500">{word.level}/{maxLevel}</span>
+          </div>
+          <div className="word-actions">
+            <button
+              onClick={() => toggleStar(word.id)}
+              className={`icon-btn ${word.starred ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' : ''}`}
+            >
+              <Star className={`w-5 h-5 ${word.starred ? 'fill-current' : ''}`} />
+            </button>
+            <button
+              onClick={() => deleteWord(word.id)}
+              className="icon-btn icon-danger"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => {
+                setCurrentCardIndex(filteredWords.findIndex(w => w.id === word.id));
+                setReviewWords(filteredWords);
+                setCurrentView('cards');
+                setShowAnswer(false);
+              }}
+              className="icon-btn icon-primary"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
     );
 
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="app-surface">
+        <div className="max-w-4xl mx-auto p-6">
         <div className="mb-6 flex justify-between items-center">
           <div className="flex flex-wrap gap-2">
             {categories.map(cat => (
@@ -1281,14 +1262,15 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
         </div>
 
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="words-grid">
             {filteredWords.map(renderGridItem)}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             {filteredWords.map(renderListItem)}
           </div>
         )}
+        </div>
       </div>
     );
   };
@@ -1306,26 +1288,30 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
         <ul className="space-y-2">
           {modal.words.map(w => (
             <li key={w.id} className="word-card-list">
-              <div className="flex items-center gap-3">
-                {typeof w.image === 'string' && (w.image.startsWith('http') || w.image.startsWith('data:')) ? (
-                  <img src={w.image} alt={w.english} className="w-8 h-8 object-cover rounded" />
-                ) : (
-                  <span className="text-2xl">{w.image}</span>
-                )}
-                <div>
-                  <p className="font-semibold">{w.english}</p>
-                  <p className="text-sm text-gray-600">{w.russian}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="progress-bar">
-                      <div className="progress-bar-fill" style={{ width: `${(w.level / maxLevel) * 100}%` }} />
-                    </div>
-                    <span className="text-xs text-gray-500">{w.level}/{maxLevel}</span>
-                  </div>
+              <div className="word-left">
+                <div className="word-media">
+                  {typeof w.image === 'string' && (w.image.startsWith('http') || w.image.startsWith('data:')) ? (
+                    <img src={w.image} alt={w.english} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-2xl grid place-items-center h-full w-full">{w.image}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="word-title">{w.english}</p>
+                  <p className="word-subtitle">{w.russian}</p>
                 </div>
               </div>
-              <div className="flex flex-col items-end text-xs text-gray-500">
-                <span>{w.category}</span>
-                <span>Повтор {formatDate(w.nextReview)}</span>
+              <div className="word-right">
+                <div className="flex items-center gap-2">
+                  <div className="progress-bar">
+                    <div className="progress-bar-fill" style={{ width: `${(w.level / maxLevel) * 100}%` }} />
+                  </div>
+                  <span className="text-xs text-slate-500">{w.level}/{maxLevel}</span>
+                </div>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <span className="badge-base badge-cat">{w.category}</span>
+                  <span className="badge-base badge-repeat">Повтор {formatDate(w.nextReview)}</span>
+                </div>
               </div>
             </li>
           ))}

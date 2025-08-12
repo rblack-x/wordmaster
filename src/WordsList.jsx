@@ -120,18 +120,6 @@ const WordsList = ({
             <span className={`badge-base ${repeatClass}`}>{repeatText}</span>
           )}
         </div>
-        <div className="word-actions justify-center">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              deleteWord(word.id);
-              setSelectedIds(prev => prev.filter(id => id !== word.id));
-            }}
-            className="icon-btn icon-danger"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-        </div>
       </div>
     );
   };
@@ -214,16 +202,6 @@ const WordsList = ({
           {word.level < maxLevel && (
             <span className={`badge-base ${repeatClass}`}>{repeatText}</span>
           )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              deleteWord(word.id);
-              setSelectedIds(prev => prev.filter(id => id !== word.id));
-            }}
-            className="icon-btn icon-danger"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
           <input
             type="checkbox"
             checked={selectedIds.includes(word.id)}
@@ -268,7 +246,7 @@ const WordsList = ({
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="pl-4 pr-8 py-2 rounded-lg bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 border-none"
+                className="pl-4 pr-8 py-2 rounded-lg bg-gray-100 text-gray-700 border border-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {categories.map(cat => (
                   <option key={cat} value={cat}>
@@ -279,7 +257,7 @@ const WordsList = ({
               <select
                 value={sortOption}
                 onChange={(e) => setSortOption(e.target.value)}
-                className="pl-4 pr-8 py-2 rounded-lg bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 border-none"
+                className="pl-4 pr-8 py-2 rounded-lg bg-gray-100 text-gray-700 border border-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="date">По дате</option>
                 <option value="alpha">По алфавиту</option>
@@ -313,16 +291,16 @@ const WordsList = ({
                 </>
               )}
               <button
-                onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
-              >
-                {viewMode === 'list' ? <LayoutGrid className="w-5 h-5" /> : <List className="w-5 h-5" />}
-              </button>
-              <button
                 onClick={addCategory}
                 className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
               >
                 <FolderPlus className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+              >
+                {viewMode === 'list' ? <LayoutGrid className="w-5 h-5" /> : <List className="w-5 h-5" />}
               </button>
             </div>
           </div>

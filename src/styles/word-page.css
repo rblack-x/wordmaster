@@ -195,3 +195,21 @@
   background-color: #dbeafe;
 }
 
+/* Confetti animation */
+.confetti-piece {
+  position: fixed;
+  top: -10px;
+  width: 10px;
+  height: 10px;
+  opacity: 0.9;
+  pointer-events: none;
+  animation: confetti-fall 3s linear forwards;
+  z-index: 9999;
+}
+
+@keyframes confetti-fall {
+  to {
+    transform: translate3d(var(--end-x), 100vh, 0) rotate(720deg);
+  }
+}
+

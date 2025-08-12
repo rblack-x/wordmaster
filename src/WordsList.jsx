@@ -28,18 +28,28 @@ const WordsList = ({
     switch (sortOption) {
       case 'alpha':
         wordsCopy.sort((a, b) => a.english.localeCompare(b.english));
+        if (sortOrder === 'desc') wordsCopy.reverse();
         break;
       case 'level':
         wordsCopy.sort((a, b) => a.level - b.level);
+        if (sortOrder === 'desc') wordsCopy.reverse();
         break;
       case 'availability':
-        wordsCopy.sort((a, b) => (a.nextReview || 0) - (b.nextReview || 0));
+        wordsCopy.sort((a, b) => {
+          const aMax = a.level === maxLevel;
+          const bMax = b.level === maxLevel;
+          if (aMax && !bMax) return 1;
+          if (!aMax && bMax) return -1;
+          const diff = (a.nextReview || 0) - (b.nextReview || 0);
+          return sortOrder === 'desc' ? -diff : diff;
+        });
         break;
       default:
         wordsCopy.sort((a, b) => a.english.localeCompare(b.english));
+        if (sortOrder === 'desc') wordsCopy.reverse();
     }
-    return sortOrder === 'desc' ? wordsCopy.reverse() : wordsCopy;
-  }, [filteredWords, sortOption, sortOrder]);
+    return wordsCopy;
+  }, [filteredWords, sortOption, sortOrder, maxLevel]);
 
   const itemsPerPage = viewMode === 'grid' ? 18 : 25;
   const totalPages = Math.ceil(sortedWords.length / itemsPerPage);

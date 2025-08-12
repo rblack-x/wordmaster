@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { BookOpen, Trophy, Star, Clock, Target, Award, Zap, ChevronRight, X, Check, RotateCcw, Volume2, Heart, Flame, Plus, Edit2, Trash2, Save, Shuffle, PenTool, Headphones, Eye, Keyboard, ShoppingCart, BarChart3, TrendingUp, Calendar, Info, Coins, Sparkles, Palette, Music, Rocket, List, LayoutGrid } from 'lucide-react';
+import { BookOpen, Trophy, Star, Clock, Target, Award, Zap, X, Check, RotateCcw, Volume2, Heart, Flame, Plus, Edit2, Save, Shuffle, PenTool, Headphones, Eye, Keyboard, ShoppingCart, BarChart3, TrendingUp, Calendar, Info, Coins, Sparkles, Palette, Music, Rocket } from 'lucide-react';
 import './styles/wordStyles.css';
 import AddWordForm from './AddWordForm';
+import WordsList from './WordsList';
 import { initialWords } from './data/initialWords';
 import { shopItems } from './data/shopItems';
 import { loadSavedData, saveWords, saveStats } from './utils/storage';
@@ -1115,166 +1116,6 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
   };
 
   // Компонент списка слов
-  const WordsList = () => {
-    const [viewMode, setViewMode] = useState('list');
-
-    const renderGridItem = (word) => (
-      <div key={word.id} className="word-card-grid">
-        <div className="word-media mx-auto">
-          {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
-            <img src={word.image} alt={word.english} className="h-full w-full object-cover" />
-          ) : (
-            <span className="text-3xl grid place-items-center h-full w-full">{word.image}</span>
-          )}
-        </div>
-        <h3 className="word-title text-center">{word.english}</h3>
-        <p className="word-subtitle text-center">{word.russian}</p>
-        <div className="flex items-center gap-2">
-          <div className="progress-bar">
-            <div className="progress-bar-fill" style={{ width: `${(word.level / maxLevel) * 100}%` }} />
-          </div>
-          <span className="text-xs text-slate-500">{word.level}/{maxLevel}</span>
-        </div>
-        <div className="flex flex-wrap justify-center gap-2">
-          <span className={`badge-base badge-status-${word.status}`}>{word.status === 'mastered' ? 'Изучено' : word.status === 'learning' ? 'Изучается' : 'Новое'}</span>
-          <span className="badge-base badge-cat">{word.category}</span>
-          <span className="badge-base badge-repeat">Повтор {formatDate(word.nextReview)}</span>
-        </div>
-        <div className="word-actions justify-center">
-          <button
-            onClick={() => toggleStar(word.id)}
-            className={`icon-btn ${word.starred ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' : ''}`}
-          >
-            <Star className={`w-5 h-5 ${word.starred ? 'fill-current' : ''}`} />
-          </button>
-          <button
-            onClick={() => deleteWord(word.id)}
-            className="icon-btn icon-danger"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => {
-              setCurrentCardIndex(filteredWords.findIndex(w => w.id === word.id));
-              setReviewWords(filteredWords);
-              setCurrentView('cards');
-              setShowAnswer(false);
-            }}
-            className="icon-btn icon-primary"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-    );
-
-    const renderListItem = (word) => (
-      <div key={word.id} className="word-card-list">
-        <div className="word-left">
-          <div className="word-media">
-            {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
-              <img src={word.image} alt={word.english} className="h-full w-full object-cover" />
-            ) : (
-              <span className="text-2xl grid place-items-center h-full w-full">{word.image}</span>
-            )}
-          </div>
-          <div className="min-w-0">
-            <h3 className="word-title truncate">{word.english}</h3>
-            <p className="word-subtitle truncate">{word.russian}</p>
-          </div>
-        </div>
-        <div className="word-right">
-          <div className="flex flex-wrap justify-end gap-2">
-            <span className={`badge-base badge-status-${word.status}`}>{word.status === 'mastered' ? 'Изучено' : word.status === 'learning' ? 'Изучается' : 'Новое'}</span>
-            <span className="badge-base badge-cat">{word.category}</span>
-            <span className="badge-base badge-repeat">Повтор {formatDate(word.nextReview)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="progress-bar">
-              <div className="progress-bar-fill" style={{ width: `${(word.level / maxLevel) * 100}%` }} />
-            </div>
-            <span className="text-xs text-slate-500">{word.level}/{maxLevel}</span>
-          </div>
-          <div className="word-actions">
-            <button
-              onClick={() => toggleStar(word.id)}
-              className={`icon-btn ${word.starred ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' : ''}`}
-            >
-              <Star className={`w-5 h-5 ${word.starred ? 'fill-current' : ''}`} />
-            </button>
-            <button
-              onClick={() => deleteWord(word.id)}
-              className="icon-btn icon-danger"
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => {
-                setCurrentCardIndex(filteredWords.findIndex(w => w.id === word.id));
-                setReviewWords(filteredWords);
-                setCurrentView('cards');
-                setShowAnswer(false);
-              }}
-              className="icon-btn icon-primary"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-
-    return (
-      <div className="app-surface">
-        <div className="max-w-4xl mx-auto p-6">
-        <div className="mb-6 flex justify-between items-center">
-          <div className="flex flex-wrap gap-2">
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  selectedCategory === cat
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {cat === 'all' ? 'Все' : cat}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
-            >
-              {viewMode === 'list' ? <LayoutGrid className="w-5 h-5" /> : <List className="w-5 h-5" />}
-            </button>
-            <button
-              onClick={() => setShowAddWordForm(true)}
-              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              Добавить слово
-            </button>
-          </div>
-        </div>
-
-        {viewMode === 'grid' ? (
-          <div className="words-grid">
-            {filteredWords.map(renderGridItem)}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {filteredWords.map(renderListItem)}
-          </div>
-        )}
-        </div>
-      </div>
-    );
-  };
-
   // Модальное окно со списком слов
   const WordListModal = ({ modal, onClose }) => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1596,7 +1437,22 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
       {/* Основной контент */}
       <div className="py-8">
         {currentView === 'dashboard' && <Dashboard />}
-        {currentView === 'words' && <WordsList />}
+        {currentView === 'words' && (
+          <WordsList
+            categories={categories}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            filteredWords={filteredWords}
+            maxLevel={maxLevel}
+            toggleStar={toggleStar}
+            deleteWord={deleteWord}
+            setCurrentCardIndex={setCurrentCardIndex}
+            setReviewWords={setReviewWords}
+            setCurrentView={setCurrentView}
+            setShowAnswer={setShowAnswer}
+            setShowAddWordForm={setShowAddWordForm}
+          />
+        )}
         {currentView === 'shop' && <Shop />}
         {currentView === 'stats' && <Statistics />}
         {currentView === 'cards' && reviewWords.length > 0 && (

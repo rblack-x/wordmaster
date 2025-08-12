@@ -1,0 +1,3 @@
+.word-card-grid {@apply bg-white rounded-lg shadow p-4 flex flex-col items-center hover:shadow-lg transition-shadow;}
+.word-card-list {@apply bg-white rounded-lg shadow p-4 flex items-center justify-between hover:shadow-lg transition-shadow;}
+.badge-base {@apply text-xs px-2 py-1 rounded-full;}

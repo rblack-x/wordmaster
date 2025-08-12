@@ -83,7 +83,7 @@ const EditWordForm = React.memo(({
                   key={emoji}
                   type="button"
                   onClick={() => handleWordChange('image', emoji)}
-                  className={`text-2xl p-2 rounded hover:bg-gray-100 ${word.image === emoji ? 'bg-blue-100 ring-2 ring-blue-500' : ''}`}
+                  className={`text-2xl w-10 h-10 flex items-center justify-center rounded hover:bg-gray-100 ${word.image === emoji ? 'bg-blue-100 ring-2 ring-blue-500' : ''}`}
                 >
                   {emoji}
                 </button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { BookOpen, Trophy, Star, Clock, Target, Award, Zap, X, Check, RotateCcw, Volume2, Heart, Flame, Plus, Edit2, Save, Shuffle, PenTool, Headphones, Eye, Keyboard, ShoppingCart, BarChart3, TrendingUp, Calendar, Info, Coins, Sparkles, Palette, Music, Rocket } from 'lucide-react';
+import { BookOpen, Trophy, Clock, Target, Award, Zap, X, Check, RotateCcw, Volume2, Heart, Flame, Plus, Edit2, Save, Shuffle, PenTool, Headphones, Eye, Keyboard, ShoppingCart, BarChart3, TrendingUp, Calendar, Info, Coins, Sparkles, Palette, Music, Rocket } from 'lucide-react';
 import './styles/word-page.css';
 import AddWordForm from './AddWordForm';
 import WordsList from './WordsList';
@@ -9,9 +9,12 @@ import { loadSavedData, saveWords, saveStats } from './utils/storage';
 import { formatDate } from './utils/formatDate';
 import { calculateNextReview, reviewIntervals } from './utils/calculateNextReview';
 
+const categoryOptions = ['Путешествия', 'Природа', 'Эмоции', 'Образование', 'Технологии', 'Еда', 'Дом', 'Животные'];
+
   const App = () => {
   const savedData = loadSavedData(initialWords);
   const maxLevel = reviewIntervals.length;
+  const categories = ['all', ...categoryOptions];
   const [words, setWords] = useState(savedData.words);
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -34,7 +37,7 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
   const [newWord, setNewWord] = useState({
     english: '',
     russian: '',
-    category: '',
+    category: categoryOptions[0],
     image: '📝',
     examples: ['', ''],
     pronunciation: ''
@@ -94,14 +97,10 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
   useEffect(() => {
     saveStats(userStats);
   }, [userStats]);
-
-  // Получить уникальные категории
-  const categories = useMemo(() => ['all', ...new Set(words.map(w => w.category))], [words]);
-
   // Фильтрация слов по категории
-  const filteredWords = useMemo(() => 
-    selectedCategory === 'all' 
-      ? words 
+  const filteredWords = useMemo(() =>
+    selectedCategory === 'all'
+      ? words
       : words.filter(w => w.category === selectedCategory),
     [words, selectedCategory]
   );
@@ -211,13 +210,6 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
     }, 1000);
   }, [words, reviewWords, currentCardIndex, userStats.activeBoosts, updateWordProgress]);
 
-  // Переключение закрепленных слов
-  const toggleStar = useCallback((wordId) => {
-    setWords(prev => prev.map(w => 
-      w.id === wordId ? { ...w, starred: !w.starred } : w
-    ));
-  }, []);
-
   // Удаление слова
   const deleteWord = useCallback((wordId) => {
     if (window.confirm('Вы уверены, что хотите удалить это слово?')) {
@@ -249,8 +241,8 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
       setNewWord({
         english: '',
         russian: '',
-        category: '',
-        image: '',
+        category: categoryOptions[0],
+        image: '📝',
         examples: ['', ''],
         pronunciation: ''
       });
@@ -616,14 +608,6 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
           <span className="text-6xl">{word.image}</span>
         )}
         <div className="flex flex-col items-end gap-2">
-          <button
-            onClick={() => toggleStar(word.id)}
-            className={`p-2 rounded-full transition-colors ${
-              word.starred ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400'
-            }`}
-          >
-            <Star className={`w-5 h-5 ${word.starred ? 'fill-current' : ''}`} />
-          </button>
           <span className="text-xs text-gray-500">
             Повтор {formatDate(word.nextReview)}
           </span>
@@ -1131,33 +1115,28 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
         </div>
         <ul className="space-y-2">
           {modal.words.map(w => (
-            <li key={w.id} className="word-card-list">
-              <div className="word-left">
-                <div className="word-media">
-                  {typeof w.image === 'string' && (w.image.startsWith('http') || w.image.startsWith('data:')) ? (
-                    <img src={w.image} alt={w.english} className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="text-2xl grid place-items-center h-full w-full">{w.image}</span>
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p className="word-title">{w.english}</p>
-                  <p className="word-subtitle">{w.russian}</p>
-                </div>
-              </div>
-              <div className="word-right">
-                <div className="flex items-center justify-center gap-2 self-center w-full">
-                  <div className="progress-bar">
-                    <div className="progress-bar-fill" style={{ width: `${(w.level / maxLevel) * 100}%` }} />
+              <li key={w.id} className="word-card-list">
+                <div className="word-left">
+                  <div className="word-media">
+                    {typeof w.image === 'string' && (w.image.startsWith('http') || w.image.startsWith('data:')) ? (
+                      <img src={w.image} alt={w.english} className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-2xl grid place-items-center h-full w-full">{w.image}</span>
+                    )}
                   </div>
-                  <span className="text-xs text-slate-500">{w.level}/{maxLevel}</span>
+                  <div className="min-w-0">
+                    <p className="word-title">{w.english}</p>
+                  </div>
                 </div>
-                <div className="flex flex-wrap justify-end gap-2">
-                  <span className="badge-base badge-cat">{w.category}</span>
-                  <span className="badge-base badge-repeat">Повтор {formatDate(w.nextReview)}</span>
+                <div className="word-right">
+                  <div className="flex items-center justify-center gap-2 self-center w-full">
+                    <div className="progress-bar">
+                      <div className="progress-bar-fill" style={{ width: `${(w.level / maxLevel) * 100}%` }} />
+                    </div>
+                    <span className="text-xs text-slate-500">{w.level}/{maxLevel}</span>
+                  </div>
                 </div>
-              </div>
-            </li>
+              </li>
           ))}
         </ul>
       </div>
@@ -1497,7 +1476,6 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
             setSelectedCategory={setSelectedCategory}
             filteredWords={filteredWords}
             maxLevel={maxLevel}
-            toggleStar={toggleStar}
             deleteWord={deleteWord}
             setCurrentCardIndex={setCurrentCardIndex}
             setReviewWords={setReviewWords}
@@ -1550,6 +1528,7 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
           setShowAddWordForm={setShowAddWordForm}
           emojiList={emojiList}
           handleImageUpload={handleImageUpload}
+          categories={categoryOptions}
         />
       )}
     </div>

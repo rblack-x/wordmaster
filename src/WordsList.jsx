@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Star, Trash2, ChevronRight, Plus, LayoutGrid, List } from 'lucide-react';
+import { Trash2, ChevronRight, Plus, LayoutGrid, List } from 'lucide-react';
 import { formatDate } from './utils/formatDate';
 
 const WordsList = ({
@@ -8,7 +8,6 @@ const WordsList = ({
   setSelectedCategory,
   filteredWords,
   maxLevel,
-  toggleStar,
   deleteWord,
   setCurrentCardIndex,
   setReviewWords,
@@ -17,7 +16,7 @@ const WordsList = ({
   setShowAddWordForm,
   onWordClick,
 }) => {
-  const [viewMode, setViewMode] = useState('list');
+  const [viewMode, setViewMode] = useState('grid');
 
   const renderGridItem = (word) => (
     <div
@@ -48,15 +47,6 @@ const WordsList = ({
         <span className="badge-base badge-repeat">Повтор {formatDate(word.nextReview)}</span>
       </div>
       <div className="word-actions justify-center">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleStar(word.id);
-          }}
-          className={`icon-btn ${word.starred ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' : ''}`}
-        >
-          <Star className={`w-5 h-5 ${word.starred ? 'fill-current' : ''}`} />
-        </button>
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -108,23 +98,12 @@ const WordsList = ({
           </div>
           <span className="text-xs text-slate-500">{word.level}/{maxLevel}</span>
         </div>
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <span className={`badge-base badge-status-${word.status}`}>
             {word.status === 'mastered' ? 'Изучено' : word.status === 'learning' ? 'На изучении' : 'Новое'}
           </span>
           <span className="badge-base badge-cat">{word.category}</span>
           <span className="badge-base badge-repeat">Повтор {formatDate(word.nextReview)}</span>
-        </div>
-        <div className="word-actions">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleStar(word.id);
-            }}
-            className={`icon-btn ${word.starred ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' : ''}`}
-          >
-            <Star className={`w-5 h-5 ${word.starred ? 'fill-current' : ''}`} />
-          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -134,6 +113,8 @@ const WordsList = ({
           >
             <Trash2 className="w-5 h-5" />
           </button>
+        </div>
+        <div className="word-actions">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -155,20 +136,18 @@ const WordsList = ({
     <div className="word-page">
       <div className="max-w-4xl mx-auto p-6">
         <div className="mb-6 flex justify-between items-center">
-          <div className="flex flex-wrap gap-2">
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  selectedCategory === cat
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {cat === 'all' ? 'Все' : cat}
-              </button>
-            ))}
+          <div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
+            >
+              {categories.map(cat => (
+                <option key={cat} value={cat}>
+                  {cat === 'all' ? 'Все' : cat}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex items-center gap-2">

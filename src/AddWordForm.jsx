@@ -1,7 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-const AddWordForm = React.memo(({ newWord, handleNewWordChange, handleExampleChange, addNewWord, setShowAddWordForm, emojiList, handleImageUpload }) => (
+const AddWordForm = React.memo(({ newWord, handleNewWordChange, handleExampleChange, addNewWord, setShowAddWordForm, emojiList, handleImageUpload, categories }) => (
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
       <div className="flex justify-between items-center mb-4">
@@ -50,13 +50,15 @@ const AddWordForm = React.memo(({ newWord, handleNewWordChange, handleExampleCha
 
         <div>
           <label className="block text-sm font-semibold mb-1">Категория</label>
-          <input
-            type="text"
+          <select
             value={newWord.category}
             onChange={(e) => handleNewWordChange('category', e.target.value)}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Мои слова"
-          />
+          >
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
         </div>
 
         <div>

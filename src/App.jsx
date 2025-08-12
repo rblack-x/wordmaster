@@ -462,11 +462,8 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
     }, 2000);
   }, [currentQuestion, userInput, selectedLetters, userStats.activeBoosts, wordCorrectMap, trainingQueue, taskIndex, updateWordProgress, generateQuestion, trainingType]);
 
-  const handleTimeout = useCallback(() => {
-    if (!showResult) {
-      checkAnswer(null);
-    }
-  }, [checkAnswer, showResult]);
+  const checkAnswerRef = useRef(checkAnswer);
+  useEffect(() => { checkAnswerRef.current = checkAnswer; }, [checkAnswer]);
 
   useEffect(() => {
     if (trainingType === 'jam' && currentView === 'training' && !showResult) {
@@ -475,7 +472,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
         setTimeLeft(prev => {
           if (prev === 1) {
             clearInterval(interval);
-            handleTimeout();
+            checkAnswerRef.current(null);
             return 0;
           }
           return prev - 1;
@@ -485,7 +482,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
     } else if (trainingType === 'jam') {
       setTimeLeft(null);
     }
-  }, [currentQuestion, currentView, trainingType, handleTimeout, showResult]);
+  }, [currentQuestion, currentView, trainingType, showResult]);
 
   // Использовать подсказку
   const useHint = useCallback(() => {

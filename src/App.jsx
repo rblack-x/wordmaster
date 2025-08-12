@@ -182,34 +182,30 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
   // Обработка ответа на карточке
   const handleCardAnswer = useCallback((correct) => {
     const currentWord = reviewWords[currentCardIndex];
-    const updatedWords = words.map(w =>
-      w.id === currentWord.id ? updateWordProgress(w, correct) : w
-    );
 
-    setWords(updatedWords);
-    
     // Проверка активных бустов
     const hasXPBoost = userStats.activeBoosts.some(b => b.id === 'boost-xp' && b.expiresAt > Date.now());
     const hasCoinBoost = userStats.activeBoosts.some(b => b.id === 'boost-coins' && b.expiresAt > Date.now());
-    
-    // Обновление статистики и геймификация
-    if (correct) {
+
+    setWords(prevWords => {
+      const updatedWords = prevWords.map(w =>
+        w.id === currentWord.id ? updateWordProgress(w, correct) : w
+      );
+
+      // Обновление статистики и геймификация
       setUserStats(prev => ({
         ...prev,
-        xp: prev.xp + (hasXPBoost ? 20 : 10),
-        coins: prev.coins + (hasCoinBoost ? 10 : 5),
-        totalWords: prev.totalWords + (currentWord.reviewCount === 0 ? 1 : 0),
+        xp: correct ? prev.xp + (hasXPBoost ? 20 : 10) : prev.xp,
+        coins: correct ? prev.coins + (hasCoinBoost ? 10 : 5) : prev.coins,
+        totalWords: correct ? prev.totalWords + (currentWord.reviewCount === 0 ? 1 : 0) : prev.totalWords,
         masteredWords: updatedWords.filter(w => w.status === 'mastered').length,
-        level: Math.floor((prev.xp + (hasXPBoost ? 20 : 10)) / 100) + 1,
+        level: correct ? Math.floor((prev.xp + (hasXPBoost ? 20 : 10)) / 100) + 1 : prev.level,
         totalReviews: prev.totalReviews + 1
       }));
-    } else {
-      setUserStats(prev => ({
-        ...prev,
-        totalReviews: prev.totalReviews + 1
-      }));
-    }
-    
+
+      return updatedWords;
+    });
+
     // Переход к следующей карточке
     setTimeout(() => {
       setShowAnswer(false);
@@ -220,7 +216,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
         setCurrentCardIndex(0);
       }
     }, 1000);
-  }, [words, reviewWords, currentCardIndex, userStats.activeBoosts, updateWordProgress]);
+  }, [reviewWords, currentCardIndex, userStats.activeBoosts, updateWordProgress]);
 
   // Удаление слова
   const deleteWord = useCallback((wordId) => {
@@ -693,76 +689,77 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
   };
 
   // Компонент карточки
-  const WordCard = ({ word }) => (
-    <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-auto transform transition-all hover:scale-105">
-      <div className="flex justify-between items-start mb-4">
-        {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
-          <img
-            src={word.image}
-            alt={word.english}
-            className="w-16 h-16 object-cover rounded"
-          />
-        ) : (
-          <span className="text-6xl">{word.image}</span>
-        )}
-        <div className="flex flex-col items-end gap-2">
-          <span className="text-xs text-gray-500">
-            Повтор {formatDate(word.nextReview)}
+  const WordCard = ({ word }) => {
+    const isAvailable = word.nextReview <= Date.now();
+    return (
+      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-auto transform transition-all hover:scale-105">
+        <div className="flex flex-col items-center mb-4">
+          {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
+            <img
+              src={word.image}
+              alt={word.english}
+              className="w-24 h-24 object-cover rounded"
+            />
+          ) : (
+            <span className="text-7xl">{word.image}</span>
+          )}
+          <span className="text-xs text-gray-500 mt-2">
+            {isAvailable ? 'Доступно' : `Будет доступно ${formatDate(word.nextReview)}`}
           </span>
         </div>
-      </div>
-      
-      <div className="text-center mb-6">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">{word.english}</h2>
-        <p className="text-gray-500 text-sm flex items-center justify-center gap-2">
-          <Volume2 className="w-4 h-4" />
-          {word.pronunciation}
-        </p>
-        <p className="text-sm text-gray-500 mt-2">Уровень: {word.level}/{maxLevel}</p>
-      </div>
-      
-      {showAnswer && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <p className="text-xl font-semibold text-blue-900">{word.russian}</p>
-          </div>
-          
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm font-semibold text-gray-600 mb-2">Примеры:</p>
-            {word.examples.map((ex, idx) => (
-              <p key={idx} className="text-gray-700 mb-1">• {ex}</p>
-            ))}
-          </div>
-          
-          <div className="flex gap-3 justify-center mt-6">
-            <button
-              onClick={() => handleCardAnswer(false)}
-              className="flex-1 bg-red-500 text-white py-3 px-6 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
-            >
-              <X className="w-5 h-5" />
-              Не помню
-            </button>
-            <button
-              onClick={() => handleCardAnswer(true)}
-              className="flex-1 bg-green-500 text-white py-3 px-6 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
-            >
-              <Check className="w-5 h-5" />
-              Помню
-            </button>
-          </div>
+
+        <div className="text-center mb-6">
+          <h2 className="text-3xl font-bold text-gray-800 mb-2">{word.english}</h2>
+          <p className="text-gray-500 text-sm flex items-center justify-center gap-2">
+            <Volume2 className="w-4 h-4" />
+            {word.pronunciation}
+          </p>
+          <p className="text-sm text-gray-500 mt-2">Уровень: {word.level}/{maxLevel}</p>
         </div>
-      )}
-      
-      {!showAnswer && (
-        <button
-          onClick={() => setShowAnswer(true)}
-          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-6 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all transform hover:scale-105"
-        >
-          Показать ответ
-        </button>
-      )}
-    </div>
-  );
+
+        {showAnswer && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="bg-blue-50 rounded-lg p-4">
+              <p className="text-xl font-semibold text-blue-900">{word.russian}</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm font-semibold text-gray-600 mb-2">Примеры:</p>
+              {word.examples.map((ex, idx) => (
+                <p key={idx} className="text-gray-700 mb-1">• {ex}</p>
+              ))}
+            </div>
+
+            <div className="flex gap-3 justify-center mt-6">
+              <button
+                onClick={() => handleCardAnswer(false)}
+                className="flex-1 bg-red-500 text-white py-3 px-6 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+              >
+                <X className="w-5 h-5" />
+                Не помню
+              </button>
+              <button
+                onClick={() => handleCardAnswer(true)}
+                className="flex-1 bg-green-500 text-white py-3 px-6 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+              >
+                <Check className="w-5 h-5" />
+                Помню
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!showAnswer && (
+          <button
+            onClick={() => setShowAnswer(true)}
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-6 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all transform hover:scale-105"
+          >
+            Показать ответ
+          </button>
+        )}
+      </div>
+    );
+  };
 
   // Компонент тренажера
   const TrainingComponent = () => {
@@ -799,7 +796,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
                   <img
                     src={currentQuestion.word.image}
                     alt={currentQuestion.word.english}
-                    className="w-16 h-16 mb-4 inline-block object-cover rounded"
+                    className="w-24 h-24 mb-4 mx-auto object-cover rounded"
                   />
                 ) : (
                   <span className="text-6xl mb-4 inline-block">{currentQuestion.word.image}</span>
@@ -867,7 +864,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
                   <img
                     src={currentQuestion.word.image}
                     alt={currentQuestion.word.english}
-                    className="w-16 h-16 mb-4 inline-block object-cover rounded"
+                    className="w-24 h-24 mb-4 mx-auto object-cover rounded"
                   />
                 ) : (
                   <span className="text-6xl mb-4 inline-block">{currentQuestion.word.image}</span>
@@ -967,7 +964,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
                   <img
                     src={currentQuestion.word.image}
                     alt={currentQuestion.word.english}
-                    className="w-16 h-16 mb-4 inline-block object-cover rounded"
+                    className="w-24 h-24 mb-4 mx-auto object-cover rounded"
                   />
                 ) : (
                   <span className="text-6xl mb-4 inline-block">{currentQuestion.word.image}</span>
@@ -1185,7 +1182,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
                   <img
                     src={currentQuestion.word.image}
                     alt={currentQuestion.word.english}
-                    className="w-16 h-16 mb-4 inline-block object-cover rounded"
+                    className="w-24 h-24 mb-4 mx-auto object-cover rounded"
                   />
                 ) : (
                   <span className="text-6xl mb-4 inline-block">{currentQuestion.word.image}</span>
@@ -1342,7 +1339,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
             </button>
           </div>
           <div className="flex flex-col items-center gap-4">
-            <div className="w-32 h-32 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden text-6xl">
+            <div className="w-40 h-40 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden text-7xl">
               {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
                 <img src={word.image} alt={word.english} className="h-full w-full object-cover" />
               ) : (

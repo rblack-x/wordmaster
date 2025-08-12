@@ -18,96 +18,40 @@ const WordsList = ({
 }) => {
   const [viewMode, setViewMode] = useState('grid');
 
-  const renderGridItem = (word) => (
-    <div
-      key={word.id}
-      className="word-card-grid cursor-pointer"
-      onClick={() => onWordClick(word)}
-    >
-      <div className="word-media mx-auto">
-        {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
-          <img src={word.image} alt={word.english} className="h-full w-full object-cover" />
-        ) : (
-          <span className="text-3xl grid place-items-center h-full w-full">{word.image}</span>
-        )}
-      </div>
-      <h3 className="word-title text-center">{word.english}</h3>
-      <p className="word-subtitle text-center">{word.russian}</p>
-      <div className="flex items-center justify-center gap-2 mt-2">
-        <div className="progress-bar">
-          <div className="progress-bar-fill" style={{ width: `${(word.level / maxLevel) * 100}%` }} />
-        </div>
-        <span className="text-xs text-slate-500">{word.level}/{maxLevel}</span>
-      </div>
-      <div className="flex flex-wrap justify-center gap-2">
-        {word.status !== 'learning' && (
-          <span className={`badge-base badge-status-${word.status}`}>
-            {word.status === 'mastered' ? 'Изучено' : 'Новое'}
-          </span>
-        )}
-        <span className="badge-base badge-cat">{word.category}</span>
-        <span className="badge-base badge-repeat">Повтор {formatDate(word.nextReview)}</span>
-      </div>
-      <div className="word-actions justify-center">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            deleteWord(word.id);
-          }}
-          className="icon-btn icon-danger"
-        >
-          <Trash2 className="w-5 h-5" />
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setCurrentCardIndex(filteredWords.findIndex(w => w.id === word.id));
-            setReviewWords(filteredWords);
-            setCurrentView('cards');
-            setShowAnswer(false);
-          }}
-          className="icon-btn icon-primary"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      </div>
-    </div>
-  );
-
-  const renderListItem = (word) => (
-    <div
-      key={word.id}
-      className="word-card-list cursor-pointer"
-      onClick={() => onWordClick(word)}
-    >
-      <div className="word-left">
-        <div className="word-media">
+  const renderGridItem = (word) => {
+    const repeatText = word.nextReview > Date.now()
+      ? `Будет доступно ${formatDate(word.nextReview)}`
+      : 'Доступно';
+    return (
+      <div
+        key={word.id}
+        className="word-card-grid cursor-pointer"
+        onClick={() => onWordClick(word)}
+      >
+        <div className="word-media mx-auto">
           {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
             <img src={word.image} alt={word.english} className="h-full w-full object-cover" />
           ) : (
-            <span className="text-2xl grid place-items-center h-full w-full">{word.image}</span>
+            <span className="text-3xl grid place-items-center h-full w-full">{word.image}</span>
           )}
         </div>
-        <div className="min-w-0">
-          <h3 className="word-title truncate">{word.english}</h3>
-          <p className="word-subtitle truncate">{word.russian}</p>
-        </div>
-      </div>
-      <div className="word-right">
-        <div className="flex items-center justify-center gap-2 self-center w-full">
+        <h3 className="word-title text-center">{word.english}</h3>
+        <p className="word-subtitle text-center">{word.russian}</p>
+        <div className="flex items-center justify-center gap-2 mt-2">
           <div className="progress-bar">
             <div className="progress-bar-fill" style={{ width: `${(word.level / maxLevel) * 100}%` }} />
           </div>
           <span className="text-xs text-slate-500">{word.level}/{maxLevel}</span>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-wrap justify-center gap-2">
           {word.status !== 'learning' && (
             <span className={`badge-base badge-status-${word.status}`}>
               {word.status === 'mastered' ? 'Изучено' : 'Новое'}
             </span>
           )}
-          <span className="badge-base badge-cat">{word.category}</span>
-          <span className="badge-base badge-repeat">Повтор {formatDate(word.nextReview)}</span>
+          <span className="badge-base badge-repeat">{repeatText}</span>
+        </div>
+        <div className="word-actions justify-center">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -117,8 +61,6 @@ const WordsList = ({
           >
             <Trash2 className="w-5 h-5" />
           </button>
-        </div>
-        <div className="word-actions">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -133,8 +75,74 @@ const WordsList = ({
           </button>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
+
+  const renderListItem = (word) => {
+    const repeatText = word.nextReview > Date.now()
+      ? `Будет доступно ${formatDate(word.nextReview)}`
+      : 'Доступно';
+    return (
+      <div
+        key={word.id}
+        className="word-card-list cursor-pointer"
+        onClick={() => onWordClick(word)}
+      >
+        <div className="word-left">
+          <div className="word-media">
+            {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
+              <img src={word.image} alt={word.english} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-2xl grid place-items-center h-full w-full">{word.image}</span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <h3 className="word-title truncate">{word.english}</h3>
+            <p className="word-subtitle truncate">{word.russian}</p>
+          </div>
+        </div>
+        <div className="word-right">
+          <div className="flex items-center justify-center gap-2 self-center w-full">
+            <div className="progress-bar">
+              <div className="progress-bar-fill" style={{ width: `${(word.level / maxLevel) * 100}%` }} />
+            </div>
+            <span className="text-xs text-slate-500">{word.level}/{maxLevel}</span>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {word.status !== 'learning' && (
+              <span className={`badge-base badge-status-${word.status}`}>
+                {word.status === 'mastered' ? 'Изучено' : 'Новое'}
+              </span>
+            )}
+            <span className="badge-base badge-repeat">{repeatText}</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteWord(word.id);
+              }}
+              className="icon-btn icon-danger"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="word-actions">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentCardIndex(filteredWords.findIndex(w => w.id === word.id));
+                setReviewWords(filteredWords);
+                setCurrentView('cards');
+                setShowAnswer(false);
+              }}
+              className="icon-btn icon-primary"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="word-page">

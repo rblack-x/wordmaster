@@ -6,6 +6,7 @@ import EditWordForm from './EditWordForm';
 import WordsList from './WordsList';
 import { initialWords } from './data/initialWords';
 import { shopItems } from './data/shopItems';
+import { autoWords } from './data/autoWords';
 import { loadSavedData, saveWords, saveStats, loadCategories, saveCategories } from './utils/storage';
 import { formatDate } from './utils/formatDate';
 import { calculateNextReview, reviewIntervals } from './utils/calculateNextReview';
@@ -308,31 +309,21 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
     }, [newWord, categoryOptions]);
 
   // Автогенерация слова
-  const generateAutoWord = useCallback(async () => {
+  const generateAutoWord = useCallback(() => {
     try {
-      let english = '';
-      // Получаем случайное слово и проверяем на уникальность
-      for (let i = 0; i < 5; i++) {
-        const res = await fetch('https://random-word-api.herokuapp.com/word');
-        const data = await res.json();
-        english = data[0];
-        if (!words.some(w => w.english.toLowerCase() === english.toLowerCase())) break;
-        english = '';
-      }
-      if (!english) return;
-
-      const translateRes = await fetch(`https://api.mymemory.translated.net/get?q=${english}&langpair=en|ru`);
-      const translateData = await translateRes.json();
-      const russian = translateData?.responseData?.translatedText || english;
-      const emojis = ['🌟', '🚀', '🎉', '📚', '🌈', '🔥', '🍀', '🌍', '🎯'];
+      const available = autoWords.filter(
+        w => !words.some(word => word.english.toLowerCase() === w.english.toLowerCase())
+      );
+      if (available.length === 0) return;
+      const base = available[Math.floor(Math.random() * available.length)];
       const word = {
         id: Date.now(),
-        english: english.charAt(0).toUpperCase() + english.slice(1),
-        russian,
+        english: base.english,
+        russian: base.russian,
         category: 'Сгенерированные',
-        image: emojis[Math.floor(Math.random() * emojis.length)],
-        examples: [],
-        pronunciation: '',
+        image: base.image,
+        examples: base.examples || [],
+        pronunciation: base.pronunciation || '',
         difficulty: 1,
         nextReview: Date.now(),
         reviewCount: 0,
@@ -348,11 +339,14 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
         saveWords(updated);
         return updated;
       });
+      if (!categoryOptions.includes('Сгенерированные')) {
+        setCategoryOptions(prev => [...prev, 'Сгенерированные']);
+      }
       setUserStats(prev => ({ ...prev, coins: prev.coins + 2 }));
     } catch (err) {
       console.error('Auto generation failed', err);
     }
-  }, [words]);
+  }, [words, categoryOptions]);
 
   // Генерация вопроса для тренажера
   const generateQuestion = useCallback((task) => {
@@ -1438,9 +1432,10 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
         const piece = document.createElement('div');
         piece.className = 'confetti-piece';
         piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-        piece.style.setProperty('--end-x', (Math.random() * 200 - 100) + 'px');
+        piece.style.setProperty('--end-x', (Math.random() * 400 - 200) + 'px');
+        piece.style.setProperty('--end-y', (-Math.random() * 200 - 50) + 'px');
         document.body.appendChild(piece);
-        setTimeout(() => piece.remove(), 3000);
+        setTimeout(() => piece.remove(), 1500);
       }
     }, []);
     return (
@@ -1842,10 +1837,6 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
             filteredWords={filteredWords}
             maxLevel={maxLevel}
             deleteWord={deleteWord}
-            setCurrentCardIndex={setCurrentCardIndex}
-            setReviewWords={setReviewWords}
-            setCurrentView={setCurrentView}
-            setShowAnswer={setShowAnswer}
             setShowAddWordForm={setShowAddWordForm}
             onWordClick={setSelectedWord}
             addCategory={addCategory}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, ChevronRight, Plus, LayoutGrid, List, FolderPlus, Wand2 } from 'lucide-react';
+import { Trash2, Plus, LayoutGrid, List, FolderPlus, Wand2 } from 'lucide-react';
 import { formatDate } from './utils/formatDate';
 
 const WordsList = ({
@@ -9,10 +9,6 @@ const WordsList = ({
   filteredWords,
   maxLevel,
   deleteWord,
-  setCurrentCardIndex,
-  setReviewWords,
-  setCurrentView,
-  setShowAnswer,
   setShowAddWordForm,
   onWordClick,
   addCategory,
@@ -42,13 +38,10 @@ const WordsList = ({
 
   const selectAll = () => {
     const pageIds = currentWords.map(w => w.id);
-    const allSelected = pageIds.every(id => selectedIds.includes(id));
-    if (allSelected) {
-      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
-    } else {
-      setSelectedIds(prev => [...new Set([...prev, ...pageIds])]);
-    }
+    setSelectedIds(prev => [...new Set([...prev, ...pageIds])]);
   };
+
+  const clearSelection = () => setSelectedIds([]);
 
   const deleteSelected = () => {
     selectedIds.forEach(id => deleteWord(id));
@@ -100,18 +93,6 @@ const WordsList = ({
             className="icon-btn icon-danger"
           >
             <Trash2 className="w-5 h-5" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentCardIndex(filteredWords.findIndex(w => w.id === word.id));
-              setReviewWords(filteredWords);
-              setCurrentView('cards');
-              setShowAnswer(false);
-            }}
-            className="icon-btn icon-primary"
-          >
-            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -195,18 +176,6 @@ const WordsList = ({
           >
             <Trash2 className="w-5 h-5" />
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentCardIndex(filteredWords.findIndex(w => w.id === word.id));
-              setReviewWords(filteredWords);
-              setCurrentView('cards');
-              setShowAnswer(false);
-            }}
-            className="icon-btn icon-primary"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
           <input
             type="checkbox"
             checked={selectedIds.includes(word.id)}
@@ -224,7 +193,7 @@ const WordsList = ({
   return (
     <div className="word-page">
       <div className="max-w-4xl mx-auto p-6">
-        <div className="mb-6 flex justify-between items-center">
+        <div className="mb-6 flex justify-between items-start">
           <div className="flex items-center gap-2">
             <select
               value={selectedCategory}
@@ -245,44 +214,51 @@ const WordsList = ({
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
-            >
-              {viewMode === 'list' ? <LayoutGrid className="w-5 h-5" /> : <List className="w-5 h-5" />}
-            </button>
-            <button
-              onClick={generateWord}
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
-            >
-              <Wand2 className="w-5 h-5" />
-              Сгенерировать
-            </button>
-            <button
-              onClick={() => setShowAddWordForm(true)}
-              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              Добавить слово
-            </button>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+              >
+                {viewMode === 'list' ? <LayoutGrid className="w-5 h-5" /> : <List className="w-5 h-5" />}
+              </button>
+              <button
+                onClick={generateWord}
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+              >
+                <Wand2 className="w-5 h-5" />
+                Сгенерировать
+              </button>
+              <button
+                onClick={() => setShowAddWordForm(true)}
+                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Добавить слово
+              </button>
+            </div>
             {viewMode === 'list' && (
-              <>
+              <div className="flex items-center gap-2">
                 <button
                   onClick={selectAll}
                   className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
                 >
-                  {currentWords.length > 0 && currentWords.every(w => selectedIds.includes(w.id)) ? 'Снять' : 'Выделить все'}
+                  Выделить все
                 </button>
-                {selectedIds.length > 0 && (
-                  <button
-                    onClick={deleteSelected}
-                    className="px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600"
-                  >
-                    Удалить выбранные
-                  </button>
-                )}
-              </>
+                <button
+                  onClick={clearSelection}
+                  className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+                >
+                  Снять
+                </button>
+                <button
+                  onClick={deleteSelected}
+                  disabled={selectedIds.length === 0}
+                  className="px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
+                >
+                  Удалить все
+                </button>
+              </div>
             )}
           </div>
         </div>

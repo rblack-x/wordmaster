@@ -34,6 +34,10 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
   const [taskIndex, setTaskIndex] = useState(0);
   const wordTaskCounts = useRef({});
   const [wordCorrectMap, setWordCorrectMap] = useState({});
+  const [trainingType, setTrainingType] = useState('zapominanie');
+  const [trainingStats, setTrainingStats] = useState({ correct: 0, incorrect: 0, results: [] });
+  const trainingStartLevels = useRef({});
+  const [timeLeft, setTimeLeft] = useState(null);
   const [showAddWordForm, setShowAddWordForm] = useState(false);
   const [wordListModal, setWordListModal] = useState(null);
   const [selectedWord, setSelectedWord] = useState(null);
@@ -333,6 +337,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
       counts[w.id] = modes.length;
       correctMapInit[w.id] = true;
       modes.forEach(m => tasks.push({ word: w, type: m }));
+      trainingStartLevels.current[w.id] = w.level || 0;
     });
 
     tasks.sort(() => Math.random() - 0.5);
@@ -342,12 +347,37 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
     wordTaskCounts.current = counts;
     setWordCorrectMap(correctMapInit);
     setTrainingWords(wordsForTraining);
+    setTrainingType('zapominanie');
+    setTrainingStats({ correct: 0, incorrect: 0, results: [] });
     generateQuestion(tasks[0]);
     setCurrentView('training');
     setUserInput('');
     setShowHint(false);
     setSelectedLetters([]);
   }, [wordsToReview, generateQuestion]);
+
+  const startJam = useCallback(() => {
+    if (words.length === 0) {
+      alert('Нет слов для тренировки!');
+      return;
+    }
+    const modes = ['multiple-choice-en-ru', 'word-choice', 'typing-en-ru', 'typing-ru-en', 'scramble', 'listening', 'first-letter'];
+    const shuffled = [...words].sort(() => Math.random() - 0.5).slice(0, 30);
+    const tasks = shuffled.map(w => ({ word: w, type: modes[Math.floor(Math.random() * modes.length)] }));
+
+    setTrainingQueue(tasks);
+    setTaskIndex(0);
+    wordTaskCounts.current = Object.fromEntries(shuffled.map(w => [w.id, 1]));
+    setWordCorrectMap({});
+    setTrainingWords(shuffled);
+    setTrainingType('jam');
+    setTrainingStats({ correct: 0, incorrect: 0, results: [] });
+    generateQuestion(tasks[0]);
+    setCurrentView('training');
+    setUserInput('');
+    setShowHint(false);
+    setSelectedLetters([]);
+  }, [words, generateQuestion]);
 
   // Проверка ответа в тренажере
   const checkAnswer = useCallback((answer) => {
@@ -370,6 +400,12 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
     const hasXPBoost = userStats.activeBoosts.some(b => b.id === 'boost-xp' && b.expiresAt > Date.now());
     const hasCoinBoost = userStats.activeBoosts.some(b => b.id === 'boost-coins' && b.expiresAt > Date.now());
 
+    setTrainingStats(prev => ({
+      ...prev,
+      correct: prev.correct + (correct ? 1 : 0),
+      incorrect: prev.incorrect + (correct ? 0 : 1)
+    }));
+
     if (correct) {
       setUserStats(prev => ({
         ...prev,
@@ -391,7 +427,24 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
     const newCount = (wordTaskCounts.current[wordId] || 0) - 1;
     wordTaskCounts.current[wordId] = newCount;
     if (newCount === 0) {
-      setWords(w => w.map(word => word.id === wordId ? updateWordProgress(word, newCorrectValue) : word));
+      if (trainingType === 'zapominanie') {
+        const updatedWord = updateWordProgress(currentQuestion.word, newCorrectValue);
+        setWords(w => w.map(word => word.id === wordId ? updatedWord : word));
+        setTrainingStats(prev => ({
+          ...prev,
+          results: [...prev.results, {
+            word: updatedWord.english,
+            level: updatedWord.level,
+            levelUp: updatedWord.level - (trainingStartLevels.current[wordId] || 0),
+            learned: updatedWord.status === 'mastered'
+          }]
+        }));
+      } else {
+        setTrainingStats(prev => ({
+          ...prev,
+          results: [...prev.results, { word: currentQuestion.word.english, correct: newCorrectValue }]
+        }));
+      }
       setTrainingWords(words => words.filter(w => w.id !== wordId));
     }
 
@@ -404,10 +457,32 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
         setSelectedLetters([]);
         setShowHint(false);
       } else {
-        setCurrentView('dashboard');
+        setCurrentView('trainingSummary');
       }
     }, 2000);
-  }, [currentQuestion, userInput, selectedLetters, userStats.activeBoosts, wordCorrectMap, trainingQueue, taskIndex, updateWordProgress, generateQuestion]);
+  }, [currentQuestion, userInput, selectedLetters, userStats.activeBoosts, wordCorrectMap, trainingQueue, taskIndex, updateWordProgress, generateQuestion, trainingType]);
+
+  const checkAnswerRef = useRef(checkAnswer);
+  useEffect(() => { checkAnswerRef.current = checkAnswer; }, [checkAnswer]);
+
+  useEffect(() => {
+    if (trainingType === 'jam' && currentView === 'training' && !showResult) {
+      setTimeLeft(10);
+      const interval = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev === 1) {
+            clearInterval(interval);
+            checkAnswerRef.current(null);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    } else if (trainingType === 'jam') {
+      setTimeLeft(null);
+    }
+  }, [currentQuestion, currentView, trainingType, showResult]);
 
   // Использовать подсказку
   const useHint = useCallback(() => {
@@ -703,6 +778,11 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
                   <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
                     Осталось: {trainingWords.length}
                   </span>
+                  {trainingType === 'jam' && (
+                    <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                      ⏱️ {timeLeft}
+                    </span>
+                  )}
                   <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
                     💡 {userStats.hintsRemaining}
                   </span>
@@ -762,9 +842,19 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
                 <h3 className="text-lg font-semibold text-gray-600">
                   {mode === 'typing-en-ru' ? 'Введите перевод на русский:' : 'Type in English:'}
                 </h3>
-                <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
-                  Осталось: {trainingWords.length}
-                </span>
+                <div className="flex items-center gap-4">
+                  <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
+                    Осталось: {trainingWords.length}
+                  </span>
+                  {trainingType === 'jam' && (
+                    <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                      ⏱️ {timeLeft}
+                    </span>
+                  )}
+                  <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                    💡 {userStats.hintsRemaining}
+                  </span>
+                </div>
               </div>
               
               <div className="text-center py-8">
@@ -852,9 +942,19 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
                 <h3 className="text-lg font-semibold text-gray-600">
                   Составьте слово из букв:
                 </h3>
-                <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
-                  Осталось: {trainingWords.length}
-                </span>
+                <div className="flex items-center gap-4">
+                  <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
+                    Осталось: {trainingWords.length}
+                  </span>
+                  {trainingType === 'jam' && (
+                    <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                      ⏱️ {timeLeft}
+                    </span>
+                  )}
+                  <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                    💡 {userStats.hintsRemaining}
+                  </span>
+                </div>
               </div>
               
               <div className="text-center py-6">
@@ -963,9 +1063,19 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
                 <h3 className="text-lg font-semibold text-gray-600">
                   Прослушайте и напишите слово:
                 </h3>
-                <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
-                  Осталось: {trainingWords.length}
-                </span>
+                <div className="flex items-center gap-4">
+                  <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
+                    Осталось: {trainingWords.length}
+                  </span>
+                  {trainingType === 'jam' && (
+                    <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                      ⏱️ {timeLeft}
+                    </span>
+                  )}
+                  <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                    💡 {userStats.hintsRemaining}
+                  </span>
+                </div>
               </div>
               
               <div className="text-center py-8">
@@ -1050,9 +1160,19 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
                 <h3 className="text-lg font-semibold text-gray-600">
                   Допишите слово:
                 </h3>
-                <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
-                  Осталось: {trainingWords.length}
-                </span>
+                <div className="flex items-center gap-4">
+                  <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
+                    Осталось: {trainingWords.length}
+                  </span>
+                  {trainingType === 'jam' && (
+                    <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                      ⏱️ {timeLeft}
+                    </span>
+                  )}
+                  <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                    💡 {userStats.hintsRemaining}
+                  </span>
+                </div>
               </div>
               
               <div className="text-center py-8">
@@ -1119,6 +1239,48 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
     
     return null;
   };
+
+  const TrainingSummary = () => (
+    <div className="max-w-2xl mx-auto p-6">
+      <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+        <h2 className="text-2xl font-bold mb-4">Результаты</h2>
+        <p className="mb-1">Правильно: {trainingStats.correct}</p>
+        <p className="mb-4">Ошибок: {trainingStats.incorrect}</p>
+        {trainingType === 'zapominanie' && (
+          <div className="text-left">
+            <h3 className="font-semibold mb-2">Прогресс слов:</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              {trainingStats.results.map(r => (
+                <li key={r.word}>
+                  {r.word} — уровень {r.level}
+                  {r.levelUp > 0 ? ` (+${r.levelUp})` : ''}
+                  {r.learned ? ' ⭐' : ''}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {trainingType === 'jam' && (
+          <div className="text-left">
+            <h3 className="font-semibold mb-2">Слова:</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              {trainingStats.results.map(r => (
+                <li key={r.word}>
+                  {r.word} — {r.correct ? '✅' : '❌'}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <button
+          onClick={() => setCurrentView('dashboard')}
+          className="mt-6 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+        >
+          На главную
+        </button>
+      </div>
+    </div>
+  );
 
   // Компонент списка слов
   // Модальное окно со списком слов
@@ -1350,8 +1512,17 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
             className="bg-gradient-to-r from-orange-500 to-pink-600 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
           >
             <Sparkles className="w-8 h-8 mb-2" />
-            <h3 className="text-lg font-bold mb-1">Мульти тренажер</h3>
+            <h3 className="text-lg font-bold mb-1">Запоминание</h3>
             <p className="text-sm opacity-90">Смешанные задания</p>
+          </button>
+
+          <button
+            onClick={startJam}
+            className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+          >
+            <Music className="w-8 h-8 mb-2" />
+            <h3 className="text-lg font-bold mb-1">Словарный джем</h3>
+            <p className="text-sm opacity-90">До 30 случайных слов</p>
           </button>
 
           <button
@@ -1462,6 +1633,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
           </div>
         )}
         {currentView === 'training' && <TrainingComponent />}
+        {currentView === 'trainingSummary' && <TrainingSummary />}
       </div>
       
       {wordListModal && (

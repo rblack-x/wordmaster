@@ -239,32 +239,55 @@ const WordsList = ({
   return (
     <div className="word-page">
       <div className="max-w-4xl mx-auto p-6">
-        <div className="mb-6 flex justify-between items-start">
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 border rounded-lg bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <div className="mb-6 flex flex-col gap-4">
+          <div className="flex justify-end flex-wrap gap-2">
+            <button
+              onClick={generateWord}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
             >
-              {categories.map(cat => (
-                <option key={cat} value={cat}>
-                  {cat === 'all' ? 'Все' : cat}
-                </option>
-              ))}
-            </select>
-            <select
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-              className="px-4 py-2 border rounded-lg bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <Wand2 className="w-5 h-5" />
+              Сгенерировать
+            </button>
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2"
             >
-              <option value="date">По дате</option>
-              <option value="alpha">По алфавиту</option>
-              <option value="level">По уровню</option>
-            </select>
+              <Upload className="w-5 h-5" />
+              Импорт CSV
+            </button>
+            <button
+              onClick={() => setShowAddWordForm(true)}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Добавить
+            </button>
           </div>
-
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-wrap justify-between items-center gap-2">
             <div className="flex items-center gap-2">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-4 py-2 border rounded-lg bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>
+                    {cat === 'all' ? 'Все' : cat}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value)}
+                className="px-4 py-2 border rounded-lg bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="date">По дате</option>
+                <option value="alpha">По алфавиту</option>
+                <option value="level">По уровню</option>
+              </select>
+            </div>
+
+            <div className="flex items-center flex-wrap gap-2 justify-end">
               <button
                 onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
                 className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
@@ -277,52 +300,31 @@ const WordsList = ({
               >
                 <FolderPlus className="w-5 h-5" />
               </button>
-              <button
-                onClick={generateWord}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
-              >
-                <Wand2 className="w-5 h-5" />
-                Сгенерировать
-              </button>
-              <button
-                onClick={() => setShowImportModal(true)}
-                className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2"
-              >
-                <Upload className="w-5 h-5" />
-                Импорт CSV
-              </button>
-              <button
-                onClick={() => setShowAddWordForm(true)}
-                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Добавить
-              </button>
+              {viewMode === 'list' && (
+                <>
+                  <button
+                    onClick={selectAll}
+                    className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+                  >
+                    Выделить все
+                  </button>
+                  <button
+                    onClick={clearSelection}
+                    disabled={selectedIds.length === 0}
+                    className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-30"
+                  >
+                    Снять
+                  </button>
+                  <button
+                    onClick={deleteSelected}
+                    disabled={selectedIds.length === 0}
+                    className="px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-30"
+                  >
+                    Удалить все
+                  </button>
+                </>
+              )}
             </div>
-            {viewMode === 'list' && (
-              <div className="flex items-center gap-2 mt-4">
-                <button
-                  onClick={selectAll}
-                  className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
-                >
-                  Выделить все
-                </button>
-                <button
-                  onClick={clearSelection}
-                  disabled={selectedIds.length === 0}
-                  className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-30"
-                >
-                  Снять
-                </button>
-                <button
-                  onClick={deleteSelected}
-                  disabled={selectedIds.length === 0}
-                  className="px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-30"
-                >
-                  Удалить все
-                </button>
-              </div>
-            )}
           </div>
         </div>
 

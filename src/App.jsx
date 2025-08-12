@@ -259,8 +259,8 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
   }, [reviewWords, currentCardIndex, userStats.activeBoosts, updateWordProgress]);
 
   // Удаление слова
-  const deleteWord = useCallback((wordId) => {
-    if (window.confirm('Вы уверены, что хотите удалить это слово?')) {
+  const deleteWord = useCallback((wordId, confirm = true) => {
+    if (!confirm || window.confirm('Вы уверены, что хотите удалить это слово?')) {
       setWords(prev => {
         const updated = prev.filter(w => w.id !== wordId);
         saveWords(updated);

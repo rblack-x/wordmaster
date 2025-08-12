@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Trash2, Plus, LayoutGrid, List, FolderPlus, Wand2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Trash2, Plus, LayoutGrid, List, FolderPlus, Wand2, Upload } from 'lucide-react';
 import { formatDate } from './utils/formatDate';
 
 const WordsList = ({
@@ -13,10 +13,12 @@ const WordsList = ({
   onWordClick,
   addCategory,
   generateWord,
+  importCSV,
 }) => {
   const [viewMode, setViewMode] = useState('grid');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]);
+  const fileInputRef = useRef(null);
 
   const itemsPerPage = viewMode === 'grid' ? 18 : 25;
   const totalPages = Math.ceil(filteredWords.length / itemsPerPage);
@@ -71,9 +73,19 @@ const WordsList = ({
         <p className="word-subtitle text-center">{word.russian}</p>
         <div className="flex items-center justify-center gap-2 mt-2">
           <div className="progress-bar">
-            <div className="progress-bar-fill" style={{ width: `${(word.level / maxLevel) * 100}%` }} />
+            <div
+              className="progress-bar-fill"
+              style={{
+                width: `${(word.level / maxLevel) * 100}%`,
+                background: word.level === maxLevel
+                  ? 'linear-gradient(to right, #fbbf24, #f59e0b)'
+                  : undefined,
+              }}
+            />
           </div>
-          <span className="text-xs text-slate-500">{word.level}/{maxLevel}</span>
+          <span className="text-xs text-slate-500">
+            {word.level === maxLevel ? '⭐' : `${word.level}/${maxLevel}`}
+          </span>
         </div>
         <div className="flex flex-wrap justify-center gap-2">
           {word.status !== 'learning' && (
@@ -81,7 +93,9 @@ const WordsList = ({
               {word.status === 'mastered' ? 'Изучено' : 'Новое'}
             </span>
           )}
-          <span className={`badge-base ${repeatClass}`}>{repeatText}</span>
+          {word.level < maxLevel && (
+            <span className={`badge-base ${repeatClass}`}>{repeatText}</span>
+          )}
         </div>
         <div className="word-actions justify-center">
           <button
@@ -103,9 +117,18 @@ const WordsList = ({
     const radius = 16;
     const circumference = 2 * Math.PI * radius;
     const progress = level / maxLevel;
+    const isMax = level === maxLevel;
     return (
       <div className="relative w-10 h-10">
         <svg className="w-10 h-10 transform -rotate-90">
+          {isMax && (
+            <defs>
+              <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#fbbf24" />
+                <stop offset="100%" stopColor="#f59e0b" />
+              </linearGradient>
+            </defs>
+          )}
           <circle
             cx="20"
             cy="20"
@@ -121,14 +144,14 @@ const WordsList = ({
             r={radius}
             strokeWidth="4"
             strokeLinecap="round"
-            className="text-blue-500"
+            className={isMax ? '' : 'text-blue-500'}
             strokeDasharray={circumference}
             strokeDashoffset={circumference - progress * circumference}
-            stroke="currentColor"
+            stroke={isMax ? 'url(#goldGradient)' : 'currentColor'}
             fill="none"
           />
         </svg>
-        <span className="absolute inset-0 flex items-center justify-center text-xs">{level}</span>
+        <span className="absolute inset-0 flex items-center justify-center text-xs">{isMax ? '⭐' : level}</span>
       </div>
     );
   };
@@ -165,7 +188,9 @@ const WordsList = ({
               {word.status === 'mastered' ? 'Изучено' : 'Новое'}
             </span>
           )}
-          <span className={`badge-base ${repeatClass}`}>{repeatText}</span>
+          {word.level < maxLevel && (
+            <span className={`badge-base ${repeatClass}`}>{repeatText}</span>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -179,10 +204,8 @@ const WordsList = ({
           <input
             type="checkbox"
             checked={selectedIds.includes(word.id)}
-            onChange={(e) => {
-              e.stopPropagation();
-              toggleSelect(word.id);
-            }}
+            onClick={(e) => e.stopPropagation()}
+            onChange={() => toggleSelect(word.id)}
             className="w-4 h-4 ml-2"
           />
         </div>
@@ -236,9 +259,29 @@ const WordsList = ({
                 <Plus className="w-5 h-5" />
                 Добавить слово
               </button>
+              <input
+                type="file"
+                accept=".csv"
+                ref={fileInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    importCSV(file);
+                    e.target.value = '';
+                  }
+                }}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2"
+              >
+                <Upload className="w-5 h-5" />
+                Импорт CSV
+              </button>
             </div>
             {viewMode === 'list' && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mt-4">
                 <button
                   onClick={selectAll}
                   className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
@@ -247,14 +290,15 @@ const WordsList = ({
                 </button>
                 <button
                   onClick={clearSelection}
-                  className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+                  disabled={selectedIds.length === 0}
+                  className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-30"
                 >
                   Снять
                 </button>
                 <button
                   onClick={deleteSelected}
                   disabled={selectedIds.length === 0}
-                  className="px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
+                  className="px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-30"
                 >
                   Удалить все
                 </button>

@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { BookOpen, Trophy, Clock, Target, Award, Zap, X, Check, RotateCcw, Volume2, Heart, Flame, Plus, Edit2, Save, Headphones, Eye, ShoppingCart, BarChart3, TrendingUp, Calendar, Info, Coins, Sparkles, Palette, Music, Rocket } from 'lucide-react';
 import './styles/word-page.css';
 import AddWordForm from './AddWordForm';
+import EditWordForm from './EditWordForm';
 import WordsList from './WordsList';
 import { initialWords } from './data/initialWords';
 import { shopItems } from './data/shopItems';
-import { autoWords } from './data/autoWords';
 import { loadSavedData, saveWords, saveStats, loadCategories, saveCategories } from './utils/storage';
 import { formatDate } from './utils/formatDate';
 import { calculateNextReview, reviewIntervals } from './utils/calculateNextReview';
@@ -60,6 +60,7 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
   const [showAddWordForm, setShowAddWordForm] = useState(false);
   const [wordListModal, setWordListModal] = useState(null);
   const [selectedWord, setSelectedWord] = useState(null);
+  const [editingWord, setEditingWord] = useState(null);
   const [newWord, setNewWord] = useState({
     english: '',
     russian: '',
@@ -304,34 +305,53 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
         coins: prev.coins + 2
       }));
     }
-  }, [newWord]);
+    }, [newWord, categoryOptions]);
 
   // Автогенерация слова
-  const generateAutoWord = useCallback(() => {
-    const available = autoWords.filter(t =>
-      !words.some(w => w.english.toLowerCase() === t.english.toLowerCase())
-    );
-    if (available.length === 0) return;
-    const template = available[Math.floor(Math.random() * available.length)];
-    const word = {
-      ...template,
-      id: Date.now(),
-      difficulty: 1,
-      nextReview: Date.now(),
-      reviewCount: 0,
-      errorCount: 0,
-      level: 0,
-      starred: false,
-      status: 'new',
-      createdAt: Date.now(),
-      lastReviewed: null,
-    };
-    setWords(prev => {
-      const updated = [...prev, word];
-      saveWords(updated);
-      return updated;
-    });
-    setUserStats(prev => ({ ...prev, coins: prev.coins + 2 }));
+  const generateAutoWord = useCallback(async () => {
+    try {
+      let english = '';
+      // Получаем случайное слово и проверяем на уникальность
+      for (let i = 0; i < 5; i++) {
+        const res = await fetch('https://random-word-api.herokuapp.com/word');
+        const data = await res.json();
+        english = data[0];
+        if (!words.some(w => w.english.toLowerCase() === english.toLowerCase())) break;
+        english = '';
+      }
+      if (!english) return;
+
+      const translateRes = await fetch(`https://api.mymemory.translated.net/get?q=${english}&langpair=en|ru`);
+      const translateData = await translateRes.json();
+      const russian = translateData?.responseData?.translatedText || english;
+      const emojis = ['🌟', '🚀', '🎉', '📚', '🌈', '🔥', '🍀', '🌍', '🎯'];
+      const word = {
+        id: Date.now(),
+        english: english.charAt(0).toUpperCase() + english.slice(1),
+        russian,
+        category: 'Сгенерированные',
+        image: emojis[Math.floor(Math.random() * emojis.length)],
+        examples: [],
+        pronunciation: '',
+        difficulty: 1,
+        nextReview: Date.now(),
+        reviewCount: 0,
+        errorCount: 0,
+        level: 0,
+        starred: false,
+        status: 'new',
+        createdAt: Date.now(),
+        lastReviewed: null,
+      };
+      setWords(prev => {
+        const updated = [...prev, word];
+        saveWords(updated);
+        return updated;
+      });
+      setUserStats(prev => ({ ...prev, coins: prev.coins + 2 }));
+    } catch (err) {
+      console.error('Auto generation failed', err);
+    }
   }, [words]);
 
   // Генерация вопроса для тренажера
@@ -628,6 +648,81 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
       return { ...prev, examples: newExamples };
     });
   }, []);
+
+  // Обработчики для редактирования слова
+  const handleEditWordChange = useCallback((field, value) => {
+    setEditingWord(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleEditExampleChange = useCallback((index, value) => {
+    setEditingWord(prev => {
+      const examples = [...(prev.examples || ['', ''])];
+      examples[index] = value;
+      return { ...prev, examples };
+    });
+  }, []);
+
+  const handleEditImageUpload = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX_SIZE = 256;
+        let { width, height } = img;
+        if (width > height && width > MAX_SIZE) {
+          height = height * (MAX_SIZE / width);
+          width = MAX_SIZE;
+        } else if (height >= width && height > MAX_SIZE) {
+          width = width * (MAX_SIZE / height);
+          height = MAX_SIZE;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setEditingWord(prev => ({ ...prev, image: dataUrl }));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const saveEditedWord = useCallback(() => {
+    if (!editingWord) return;
+    setWords(prev => {
+      const updated = prev.map(w => (w.id === editingWord.id ? editingWord : w));
+      saveWords(updated);
+      return updated;
+    });
+    setEditingWord(null);
+  }, [editingWord]);
+
+  const resetWordProgress = useCallback(() => {
+    setEditingWord(prev => prev ? {
+      ...prev,
+      level: 0,
+      reviewCount: 0,
+      errorCount: 0,
+      status: 'new',
+      nextReview: Date.now(),
+      lastReviewed: null,
+    } : prev);
+  }, []);
+
+  const markWordLearned = useCallback(() => {
+    setEditingWord(prev => prev ? {
+      ...prev,
+      level: maxLevel,
+      status: 'mastered',
+      nextReview: Date.now(),
+    } : prev);
+  }, [maxLevel]);
 
   // Компонент магазина
   const Shop = () => (
@@ -1333,15 +1428,17 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
   };
 
   const TrainingSummary = () => {
+    const confettiPlayed = useRef(false);
     useEffect(() => {
+      if (confettiPlayed.current) return;
+      confettiPlayed.current = true;
       const colors = ['#bb0000', '#ffffff', '#3333ff', '#00bb00', '#ffbb00', '#ff00bb'];
       const pieces = 100;
       for (let i = 0; i < pieces; i++) {
         const piece = document.createElement('div');
         piece.className = 'confetti-piece';
-        piece.style.left = Math.random() * 100 + '%';
         piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-        piece.style.setProperty('--end-x', (Math.random() * 200 - 100) + 'vw');
+        piece.style.setProperty('--end-x', (Math.random() * 200 - 100) + 'px');
         document.body.appendChild(piece);
         setTimeout(() => piece.remove(), 3000);
       }
@@ -1464,9 +1561,17 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
         <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Карточка слова</h2>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { onClose(); setEditingWord(word); }}
+                className="p-2 hover:bg-gray-100 rounded"
+              >
+                <Edit2 className="w-5 h-5" />
+              </button>
+              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
           <div className="flex flex-col items-center gap-4">
             <div className="w-40 h-40 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden text-7xl">
@@ -1792,6 +1897,20 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
           emojiList={emojiList}
           handleImageUpload={handleImageUpload}
           categories={categoryOptions}
+        />
+      )}
+      {editingWord && (
+        <EditWordForm
+          word={editingWord}
+          handleWordChange={handleEditWordChange}
+          handleExampleChange={handleEditExampleChange}
+          saveWord={saveEditedWord}
+          onClose={() => setEditingWord(null)}
+          emojiList={emojiList}
+          handleImageUpload={handleEditImageUpload}
+          categories={categoryOptions}
+          resetProgress={resetWordProgress}
+          markLearned={markWordLearned}
         />
       )}
     </div>

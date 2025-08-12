@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, ChevronRight, Plus, LayoutGrid, List, FolderPlus } from 'lucide-react';
+import { Trash2, ChevronRight, Plus, LayoutGrid, List, FolderPlus, Wand2 } from 'lucide-react';
 import { formatDate } from './utils/formatDate';
 
 const WordsList = ({
@@ -16,6 +16,7 @@ const WordsList = ({
   setShowAddWordForm,
   onWordClick,
   addCategory,
+  generateWord,
 }) => {
   const [viewMode, setViewMode] = useState('grid');
 
@@ -81,6 +82,40 @@ const WordsList = ({
     );
   };
 
+  const ProgressCircle = ({ level }) => {
+    const radius = 16;
+    const circumference = 2 * Math.PI * radius;
+    const progress = level / maxLevel;
+    return (
+      <div className="relative w-10 h-10">
+        <svg className="w-10 h-10 transform -rotate-90">
+          <circle
+            cx="20"
+            cy="20"
+            r={radius}
+            strokeWidth="4"
+            className="text-gray-200"
+            stroke="currentColor"
+            fill="none"
+          />
+          <circle
+            cx="20"
+            cy="20"
+            r={radius}
+            strokeWidth="4"
+            strokeLinecap="round"
+            className="text-blue-500"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference - progress * circumference}
+            stroke="currentColor"
+            fill="none"
+          />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center text-xs">{level}</span>
+      </div>
+    );
+  };
+
   const renderListItem = (word) => {
     const isAvailable = word.nextReview <= Date.now();
     const repeatText = isAvailable
@@ -94,6 +129,7 @@ const WordsList = ({
         onClick={() => onWordClick(word)}
       >
         <div className="word-left">
+          <ProgressCircle level={word.level} />
           <div className="word-media">
             {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
               <img src={word.image} alt={word.english} className="h-full w-full object-cover" />
@@ -101,18 +137,12 @@ const WordsList = ({
               <span className="text-2xl grid place-items-center h-full w-full">{word.image}</span>
             )}
           </div>
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex flex-col min-w-0">
             <h3 className="word-title truncate">{word.english}</h3>
             <p className="word-subtitle truncate">{word.russian}</p>
           </div>
         </div>
         <div className="word-right">
-          <div className="flex items-center gap-2">
-            <div className="progress-bar">
-              <div className="progress-bar-fill" style={{ width: `${(word.level / maxLevel) * 100}%` }} />
-            </div>
-            <span className="text-xs text-slate-500">{word.level}/{maxLevel}</span>
-          </div>
           {word.status !== 'learning' && (
             <span className={`badge-base badge-status-${word.status}`}>
               {word.status === 'mastered' ? 'Изучено' : 'Новое'}
@@ -175,6 +205,13 @@ const WordsList = ({
               className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
             >
               {viewMode === 'list' ? <LayoutGrid className="w-5 h-5" /> : <List className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={generateWord}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+            >
+              <Wand2 className="w-5 h-5" />
+              Сгенерировать
             </button>
             <button
               onClick={() => setShowAddWordForm(true)}

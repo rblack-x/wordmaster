@@ -5,6 +5,7 @@ import AddWordForm from './AddWordForm';
 import WordsList from './WordsList';
 import { initialWords } from './data/initialWords';
 import { shopItems } from './data/shopItems';
+import { autoWords } from './data/autoWords';
 import { loadSavedData, saveWords, saveStats, loadCategories, saveCategories } from './utils/storage';
 import { formatDate } from './utils/formatDate';
 import { calculateNextReview, reviewIntervals } from './utils/calculateNextReview';
@@ -93,9 +94,15 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
   }, []);
 
   // Список эмодзи для выбора
-  const emojiList = ['📝', '🌟', '🌈', '🔥', '💡', '🎨', '🎭', '🎪', '🎯', '🎲', '🎸', '🎹', '🏆', '🚀', '✨', '💎', '🌺', '🌸',
- '🌼', '🌻', '🌷', '🌹', '🍀', '🌲', '🌳', '🌴', '🌵', '🌊', '⛰️', '🏔️', '🌋', '🏝️', '🏖️', '🌅', '🌄', '🌠', '🌌', '☀️', '🌙', '⭐',
- '☁️', '⛅', '🌤️', '🌥️', '🌦️', '🌧️', '⛈️', '❄️', '☃️', '🌨️'];
+  const emojiList = [
+    '📝', '🌟', '🌈', '🔥', '💡', '🎨', '🎭', '🎪', '🎯', '🎲', '🎸', '🎹', '🏆', '🚀', '✨', '💎',
+    '🌺', '🌸', '🌼', '🌻', '🌷', '🌹', '🍀', '🌲', '🌳', '🌴', '🌵', '🌊', '⛰️', '🏔️', '🌋',
+    '🏝️', '🏖️', '🌅', '🌄', '🌠', '🌌', '☀️', '🌙', '⭐', '☁️', '⛅', '🌤️', '🌥️', '🌦️',
+    '🌧️', '⛈️', '❄️', '☃️', '🌨️', '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨',
+    '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐦', '🐤', '🐧', '🦅', '🦆', '🦉', '🐺', '🐗',
+    '🐴', '🦄', '🐝', '🦋', '🐌', '🐞', '🐢', '🐍', '🐙', '🦑', '🦀', '🐠', '🐟', '🐡',
+    '🐬', '🐳', '🦈', '🌍', '🌎', '🌏', '⚡', '🎁', '📚', '📱', '💻', '⌚'
+  ];
 
   // Сохранение данных в localStorage
   useEffect(() => {
@@ -283,6 +290,34 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
       }));
     }
   }, [newWord]);
+
+  // Автогенерация слова
+  const generateAutoWord = useCallback(() => {
+    const available = autoWords.filter(t =>
+      !words.some(w => w.english.toLowerCase() === t.english.toLowerCase())
+    );
+    if (available.length === 0) return;
+    const template = available[Math.floor(Math.random() * available.length)];
+    const word = {
+      ...template,
+      id: Date.now(),
+      difficulty: 1,
+      nextReview: Date.now(),
+      reviewCount: 0,
+      errorCount: 0,
+      level: 0,
+      starred: false,
+      status: 'new',
+      createdAt: Date.now(),
+      lastReviewed: null,
+    };
+    setWords(prev => {
+      const updated = [...prev, word];
+      saveWords(updated);
+      return updated;
+    });
+    setUserStats(prev => ({ ...prev, coins: prev.coins + 2 }));
+  }, [words]);
 
   // Генерация вопроса для тренажера
   const generateQuestion = useCallback((task) => {
@@ -1661,6 +1696,7 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
             setShowAddWordForm={setShowAddWordForm}
             onWordClick={setSelectedWord}
             addCategory={addCategory}
+            generateWord={generateAutoWord}
           />
         )}
         {currentView === 'shop' && <Shop />}

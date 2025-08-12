@@ -530,13 +530,33 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
 
   const handleImageUpload = useCallback((e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setNewWord(prev => ({ ...prev, image: reader.result }));
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX_SIZE = 256;
+        let { width, height } = img;
+        if (width > height && width > MAX_SIZE) {
+          height = height * (MAX_SIZE / width);
+          width = MAX_SIZE;
+        } else if (height >= width && height > MAX_SIZE) {
+          width = width * (MAX_SIZE / height);
+          height = MAX_SIZE;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setNewWord(prev => ({ ...prev, image: dataUrl }));
       };
-      reader.readAsDataURL(file);
-    }
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
   }, [setNewWord]);
 
   const handleExampleChange = useCallback((index, value) => {
@@ -1341,7 +1361,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">{word.english}</h2>
+            <h2 className="text-xl font-bold">Карточка слова</h2>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
               <X className="w-5 h-5" />
             </button>
@@ -1354,6 +1374,11 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
                 <span>{word.image}</span>
               )}
             </div>
+            <h3 className="text-2xl font-bold text-center">{word.english}</h3>
+            {word.pronunciation && (
+              <p className="text-gray-500">{word.pronunciation}</p>
+            )}
+            <p className="text-lg text-blue-600 text-center">{word.russian}</p>
             {word.examples && word.examples.length > 0 && (
               <div className="w-full">
                 <h3 className="font-semibold mb-2 text-center">Примеры</h3>

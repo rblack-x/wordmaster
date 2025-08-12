@@ -1,39 +1,56 @@
-.app-surface {@apply bg-slate-50 min-h-screen;}
+/* поверхность приложения */
+.app-surface { @apply bg-slate-50 min-h-screen; }
 
+/* контейнеры */
+.words-grid { @apply grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4; }
+.words-list { @apply flex flex-col gap-3 sm:gap-4; }
+
+/* карточка в сетке */
 .word-card-grid {
   @apply w-full bg-white rounded-xl ring-1 ring-slate-200 shadow-sm
-         p-4 sm:p-5 flex flex-col gap-3 hover:shadow-md transition-all;
-}
-
-.word-card-list {
-  @apply w-full bg-white rounded-xl ring-1 ring-slate-200 shadow-sm
-         px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between gap-4
+         p-4 sm:p-5 flex flex-col items-center gap-3
          hover:shadow-md hover:ring-slate-300 transition-all;
 }
+.word-card-grid .word-media { @apply h-24 w-24 rounded-lg bg-slate-100 overflow-hidden; }
+.word-card-grid .word-title { @apply text-base sm:text-lg font-semibold text-slate-900 text-center; }
+.word-card-grid .word-subtitle { @apply text-sm text-slate-500 text-center; }
 
-.word-title    {@apply text-lg font-semibold text-slate-900 leading-tight;}
-.word-subtitle {@apply text-sm text-slate-500;}
+/* карточка в списке (главное место правок) */
+.word-card-list {
+  @apply w-full bg-white rounded-xl ring-1 ring-slate-200 shadow-sm
+         p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between
+         gap-3 sm:gap-4 hover:shadow-md hover:ring-slate-300 transition-all;
+}
+.word-card-list .word-left  { @apply flex items-center gap-3 min-w-0 flex-1; }
+.word-card-list .word-right { @apply flex flex-col sm:items-end gap-2 w-full sm:w-auto; }
 
-.word-left  {@apply flex items-center gap-3 min-w-0;}
-.word-right {@apply flex flex-col items-end gap-2 min-w-[40%];}
+.word-card-list .word-media {
+  @apply h-12 w-12 sm:h-14 sm:w-14 flex-none rounded-md bg-slate-100 overflow-hidden;
+}
 
-.word-media {@apply h-10 w-10 flex-none rounded-md bg-slate-100 overflow-hidden;}
+/* типографика */
+.word-title    { @apply text-lg font-semibold text-slate-900 leading-tight truncate; }
+.word-subtitle { @apply text-sm text-slate-500 truncate; }
 
-.badge-base {@apply text-[11px] sm:text-xs font-medium px-2.5 py-1 rounded-full border border-transparent;}
-.badge-status-mastered {@apply bg-green-50 text-green-700;}
-.badge-status-learning {@apply bg-amber-50 text-amber-700;}
-.badge-status-new {@apply bg-slate-100 text-slate-700;}
-.badge-cat {@apply bg-blue-50 text-blue-700;}
-.badge-repeat {@apply bg-violet-50 text-violet-700;}
-.badge-ghost {@apply bg-slate-100 text-slate-700;}
+/* бейджи */
+.badge-base { @apply text-[11px] sm:text-xs font-medium px-2.5 py-1 rounded-full border border-transparent whitespace-nowrap; }
+.badge-status-mastered { @apply bg-green-50 text-green-700; }
+.badge-status-learning { @apply bg-amber-50 text-amber-700; }
+.badge-status-new      { @apply bg-slate-100 text-slate-700; }
+.badge-cat    { @apply bg-blue-50 text-blue-700; }
+.badge-repeat { @apply bg-violet-50 text-violet-700; }
+.badge-ghost  { @apply bg-slate-100 text-slate-700; }
 
-.progress-bar      {@apply w-28 sm:w-32 h-2 bg-slate-200 rounded-full overflow-hidden;}
-.progress-bar-fill {@apply h-full bg-green-500 transition-[width] duration-300 ease-out;}
+/* прогресс */
+.progress-bar      { @apply w-28 sm:w-32 h-2 bg-slate-200 rounded-full overflow-hidden; }
+.progress-bar-fill { @apply h-full bg-green-500 transition-[width] duration-300 ease-out; }
 
-.word-actions {@apply flex items-center gap-2;}
-.icon-btn {@apply h-9 w-9 grid place-items-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800 transition-colors;}
-.icon-danger {@apply bg-red-50 text-red-600 hover:bg-red-100;}
-.icon-primary {@apply bg-blue-50 text-blue-600 hover:bg-blue-100;}
-
-.words-grid {@apply grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4;}
-
+/* экшн-кнопки */
+.word-actions { @apply flex items-center gap-2; }
+.icon-btn {
+  @apply h-9 w-9 grid place-items-center rounded-full bg-slate-100 text-slate-600
+         hover:bg-slate-200 hover:text-slate-800 transition-colors
+         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400;
+}
+.icon-danger  { @apply !bg-red-50  !text-red-600  hover:!bg-red-100; }
+.icon-primary { @apply !bg-blue-50 !text-blue-600 hover:!bg-blue-100; }

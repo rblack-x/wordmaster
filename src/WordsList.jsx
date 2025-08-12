@@ -170,10 +170,11 @@ const WordsList = ({
             {filteredWords.map(renderGridItem)}
           </div>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="words-list">
             {filteredWords.map(renderListItem)}
           </div>
         )}
+
       </div>
     </div>
   );

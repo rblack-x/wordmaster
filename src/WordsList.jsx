@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Trash2, Plus, LayoutGrid, List, FolderPlus, Wand2, Upload, X } from 'lucide-react';
+import { Trash2, Plus, LayoutGrid, List, FolderPlus, Wand2, Upload, X, CheckSquare, SquareX } from 'lucide-react';
 import { formatDate } from './utils/formatDate';
 
 const WordsList = ({
@@ -268,7 +268,7 @@ const WordsList = ({
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-4 py-2 border rounded-lg bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-4 pr-8 py-2 rounded-lg bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 border-none"
               >
                 {categories.map(cat => (
                   <option key={cat} value={cat}>
@@ -279,7 +279,7 @@ const WordsList = ({
               <select
                 value={sortOption}
                 onChange={(e) => setSortOption(e.target.value)}
-                className="px-4 py-2 border rounded-lg bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-4 pr-8 py-2 rounded-lg bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 border-none"
               >
                 <option value="date">По дате</option>
                 <option value="alpha">По алфавиту</option>
@@ -288,6 +288,30 @@ const WordsList = ({
             </div>
 
             <div className="flex items-center flex-wrap gap-2 justify-end">
+              {viewMode === 'list' && (
+                <>
+                  <button
+                    onClick={selectAll}
+                    className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+                  >
+                    <CheckSquare className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={clearSelection}
+                    disabled={selectedIds.length === 0}
+                    className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-30"
+                  >
+                    <SquareX className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={deleteSelected}
+                    disabled={selectedIds.length === 0}
+                    className="p-2 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-30"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
                 className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
@@ -300,30 +324,6 @@ const WordsList = ({
               >
                 <FolderPlus className="w-5 h-5" />
               </button>
-              {viewMode === 'list' && (
-                <>
-                  <button
-                    onClick={selectAll}
-                    className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
-                  >
-                    Выделить все
-                  </button>
-                  <button
-                    onClick={clearSelection}
-                    disabled={selectedIds.length === 0}
-                    className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-30"
-                  >
-                    Снять
-                  </button>
-                  <button
-                    onClick={deleteSelected}
-                    disabled={selectedIds.length === 0}
-                    className="px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-30"
-                  >
-                    Удалить все
-                  </button>
-                </>
-              )}
             </div>
           </div>
         </div>

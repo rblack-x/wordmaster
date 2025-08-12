@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Trash2, Plus, LayoutGrid, List, FolderPlus, Wand2, Upload, X, CheckSquare, SquareX } from 'lucide-react';
+import { Trash2, Plus, LayoutGrid, List, FolderPlus, Wand2, Upload, X, CheckSquare, SquareX, ArrowUp, ArrowDown } from 'lucide-react';
 import { formatDate } from './utils/formatDate';
 
 const WordsList = ({
@@ -19,20 +19,27 @@ const WordsList = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]);
   const fileInputRef = useRef(null);
-  const [sortOption, setSortOption] = useState('date');
+  const [sortOption, setSortOption] = useState('alpha');
+  const [sortOrder, setSortOrder] = useState('asc');
   const [showImportModal, setShowImportModal] = useState(false);
 
   const sortedWords = useMemo(() => {
     const wordsCopy = [...filteredWords];
     switch (sortOption) {
       case 'alpha':
-        return wordsCopy.sort((a, b) => a.english.localeCompare(b.english));
+        wordsCopy.sort((a, b) => a.english.localeCompare(b.english));
+        break;
       case 'level':
-        return wordsCopy.sort((a, b) => b.level - a.level);
+        wordsCopy.sort((a, b) => a.level - b.level);
+        break;
+      case 'availability':
+        wordsCopy.sort((a, b) => (a.nextReview || 0) - (b.nextReview || 0));
+        break;
       default:
-        return wordsCopy.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        wordsCopy.sort((a, b) => a.english.localeCompare(b.english));
     }
-  }, [filteredWords, sortOption]);
+    return sortOrder === 'desc' ? wordsCopy.reverse() : wordsCopy;
+  }, [filteredWords, sortOption, sortOrder]);
 
   const itemsPerPage = viewMode === 'grid' ? 18 : 25;
   const totalPages = Math.ceil(sortedWords.length / itemsPerPage);
@@ -42,7 +49,7 @@ const WordsList = ({
   useEffect(() => {
     setCurrentPage(1);
     setSelectedIds([]);
-  }, [viewMode, filteredWords, sortOption]);
+  }, [viewMode, filteredWords, sortOption, sortOrder]);
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages || 1);
@@ -254,15 +261,23 @@ const WordsList = ({
                   </option>
                 ))}
               </select>
-              <select
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value)}
-                className="pl-4 pr-8 py-2 rounded-lg bg-gray-100 text-gray-700 border border-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="date">По дате</option>
-                <option value="alpha">По алфавиту</option>
-                <option value="level">По уровню</option>
-              </select>
+              <div className="flex items-center">
+                <select
+                  value={sortOption}
+                  onChange={(e) => setSortOption(e.target.value)}
+                  className="pl-4 pr-8 py-2 rounded-lg bg-gray-100 text-gray-700 border border-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="alpha">По алфавиту</option>
+                  <option value="availability">По доступности</option>
+                  <option value="level">По уровню</option>
+                </select>
+                <button
+                  onClick={() => setSortOrder(o => o === 'asc' ? 'desc' : 'asc')}
+                  className="ml-2 p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+                >
+                  {sortOrder === 'asc' ? <ArrowUp className="w-5 h-5" /> : <ArrowDown className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center flex-wrap gap-2 justify-end">

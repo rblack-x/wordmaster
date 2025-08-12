@@ -1614,7 +1614,18 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
                 <span>{word.image}</span>
               )}
             </div>
-            <h3 className="text-2xl font-bold text-center">{word.english}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-2xl font-bold text-center">{word.english}</h3>
+              <button
+                onClick={() => {
+                  const utterance = new SpeechSynthesisUtterance(word.english);
+                  speechSynthesis.speak(utterance);
+                }}
+                className="p-2 hover:bg-gray-100 rounded"
+              >
+                <Volume2 className="w-5 h-5" />
+              </button>
+            </div>
             {word.pronunciation && (
               <p className="text-gray-500">{word.pronunciation}</p>
             )}

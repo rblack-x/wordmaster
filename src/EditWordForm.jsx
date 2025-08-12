@@ -64,7 +64,7 @@ const EditWordForm = React.memo(({
           <select
             value={word.category}
             onChange={(e) => handleWordChange('category', e.target.value)}
-            className="w-full pl-3 pr-8 py-2 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 border-none"
+            className="w-full pl-3 pr-8 py-2 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-300 appearance-none"
           >
             {categories.map(cat => (
               <option key={cat} value={cat}>{cat}</option>

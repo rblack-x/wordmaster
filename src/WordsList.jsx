@@ -77,8 +77,10 @@ const WordsList = ({
   const clearSelection = () => setSelectedIds([]);
 
   const deleteSelected = () => {
-    selectedIds.forEach(id => deleteWord(id));
-    setSelectedIds([]);
+    if (window.confirm(`Удалить выбранные слова (${selectedIds.length} шт.)?`)) {
+      selectedIds.forEach(id => deleteWord(id, false));
+      setSelectedIds([]);
+    }
   };
 
   const handleImportFile = (e) => {

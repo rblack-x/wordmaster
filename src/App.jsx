@@ -113,8 +113,13 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
   );
 
   // Слова для повторения (по алгоритму интервального повторения)
-  const wordsToReview = useMemo(() => 
+  const wordsToReview = useMemo(() =>
     words.filter(w => w.nextReview <= new Date().getTime() && w.status !== 'mastered'),
+    [words]
+  );
+
+  const newWords = useMemo(() =>
+    words.filter(w => w.reviewCount === 0),
     [words]
   );
 
@@ -482,7 +487,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
     } else if (trainingType === 'jam') {
       setTimeLeft(null);
     }
-  }, [currentQuestion, currentView, trainingType, showResult]);
+  }, [taskIndex, currentView, trainingType, showResult]);
 
   // Использовать подсказку
   const useHint = useCallback(() => {
@@ -1490,21 +1495,21 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button
             onClick={() => {
-              if (wordsToReview.length > 0) {
-                setReviewWords(wordsToReview);
+              if (newWords.length > 0) {
+                setReviewWords(newWords);
                 setCurrentCardIndex(0);
                 setCurrentView('cards');
                 setShowAnswer(false);
               }
             }}
-            disabled={wordsToReview.length === 0}
+            disabled={newWords.length === 0}
             className={`bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl p-6 shadow-lg transition-all transform ${
-              wordsToReview.length > 0 ? 'hover:shadow-xl hover:scale-105' : 'opacity-50 cursor-not-allowed'
+              newWords.length > 0 ? 'hover:shadow-xl hover:scale-105' : 'opacity-50 cursor-not-allowed'
             }`}
           >
             <Clock className="w-8 h-8 mb-2" />
-            <h3 className="text-lg font-bold mb-1">Повторение</h3>
-            <p className="text-sm opacity-90">{wordsToReview.length} слов готовы</p>
+            <h3 className="text-lg font-bold mb-1">Новые слова</h3>
+            <p className="text-sm opacity-90">{newWords.length} новых слов</p>
           </button>
 
           <button

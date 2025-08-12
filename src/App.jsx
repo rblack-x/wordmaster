@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { BookOpen, Trophy, Clock, Target, Award, Zap, X, Check, RotateCcw, Volume2, Heart, Flame, Plus, Edit2, Save, Shuffle, PenTool, Headphones, Eye, Keyboard, ShoppingCart, BarChart3, TrendingUp, Calendar, Info, Coins, Sparkles, Palette, Music, Rocket } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { BookOpen, Trophy, Clock, Target, Award, Zap, X, Check, RotateCcw, Volume2, Heart, Flame, Plus, Edit2, Save, Headphones, Eye, ShoppingCart, BarChart3, TrendingUp, Calendar, Info, Coins, Sparkles, Palette, Music, Rocket } from 'lucide-react';
 import './styles/word-page.css';
 import AddWordForm from './AddWordForm';
 import WordsList from './WordsList';
@@ -22,7 +22,6 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
   const [reviewWords, setReviewWords] = useState([]);
   const [showAnswer, setShowAnswer] = useState(false);
   const [userStats, setUserStats] = useState(savedData.stats);
-  const [trainingMode, setTrainingMode] = useState(null);
   const [trainingWords, setTrainingWords] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -31,6 +30,10 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
   const [showHint, setShowHint] = useState(false);
   const [scrambledLetters, setScrambledLetters] = useState([]);
   const [selectedLetters, setSelectedLetters] = useState([]);
+  const [trainingQueue, setTrainingQueue] = useState([]);
+  const [taskIndex, setTaskIndex] = useState(0);
+  const wordTaskCounts = useRef({});
+  const [wordCorrectMap, setWordCorrectMap] = useState({});
   const [showAddWordForm, setShowAddWordForm] = useState(false);
   const [wordListModal, setWordListModal] = useState(null);
   const [selectedWord, setSelectedWord] = useState(null);
@@ -257,18 +260,12 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
   }, [newWord]);
 
   // Генерация вопроса для тренажера
-  const generateQuestion = useCallback((wordsPool, mode) => {
-    if (wordsPool.length === 0) return;
+  const generateQuestion = useCallback((task) => {
+    if (!task) return;
 
-    let actualMode = mode;
-    if (mode === 'mixed') {
-      const modes = ['multiple-choice-en-ru', 'multiple-choice-ru-en', 'typing-en-ru', 'typing-ru-en', 'scramble', 'listening', 'first-letter'];
-      actualMode = modes[Math.floor(Math.random() * modes.length)];
-    }
+    const { word: correctWord, type: actualMode } = task;
 
-    const correctWord = wordsPool[Math.floor(Math.random() * wordsPool.length)];
-
-    if (actualMode === 'multiple-choice-en-ru' || actualMode === 'multiple-choice-ru-en') {
+    if (actualMode === 'multiple-choice-en-ru' || actualMode === 'word-choice') {
       const otherWords = words.filter(w => w.id !== correctWord.id);
       const wrongAnswers = [];
 
@@ -319,8 +316,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
   }, [words]);
 
   // Начать тренировку
-  const startTraining = useCallback((mode) => {
-    setTrainingMode(mode);
+  const startTraining = useCallback(() => {
     const wordsForTraining = wordsToReview.slice(0, 10);
 
     if (wordsForTraining.length === 0) {
@@ -328,8 +324,25 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
       return;
     }
 
+    const modes = ['multiple-choice-en-ru', 'word-choice', 'typing-en-ru', 'typing-ru-en', 'scramble', 'listening', 'first-letter'];
+    const tasks = [];
+    const counts = {};
+    const correctMapInit = {};
+
+    wordsForTraining.forEach(w => {
+      counts[w.id] = modes.length;
+      correctMapInit[w.id] = true;
+      modes.forEach(m => tasks.push({ word: w, type: m }));
+    });
+
+    tasks.sort(() => Math.random() - 0.5);
+
+    setTrainingQueue(tasks);
+    setTaskIndex(0);
+    wordTaskCounts.current = counts;
+    setWordCorrectMap(correctMapInit);
     setTrainingWords(wordsForTraining);
-    generateQuestion(wordsForTraining, mode);
+    generateQuestion(tasks[0]);
     setCurrentView('training');
     setUserInput('');
     setShowHint(false);
@@ -339,9 +352,9 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
   // Проверка ответа в тренажере
   const checkAnswer = useCallback((answer) => {
     let correct = false;
-    const mode = trainingMode === 'mixed' ? currentQuestion.type : trainingMode;
+    const mode = currentQuestion.type;
 
-    if (mode === 'multiple-choice-en-ru' || mode === 'multiple-choice-ru-en') {
+    if (mode === 'multiple-choice-en-ru' || mode === 'word-choice') {
       setSelectedAnswer(answer);
       correct = answer === currentQuestion.correctId;
     } else if (mode === 'typing-en-ru' || mode === 'typing-ru-en' || mode === 'listening' || mode === 'first-letter') {
@@ -350,13 +363,13 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
       const assembled = selectedLetters.map(l => l.letter).join('');
       correct = assembled === currentQuestion.correctAnswer;
     }
-    
+
     setShowResult(true);
-    
+
     // Проверка активных бустов
     const hasXPBoost = userStats.activeBoosts.some(b => b.id === 'boost-xp' && b.expiresAt > Date.now());
     const hasCoinBoost = userStats.activeBoosts.some(b => b.id === 'boost-coins' && b.expiresAt > Date.now());
-    
+
     if (correct) {
       setUserStats(prev => ({
         ...prev,
@@ -371,17 +384,22 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
         totalReviews: prev.totalReviews + 1
       }));
     }
-    
-    // Обновляем статистику слова
-    setWords(prev => prev.map(w =>
-      w.id === currentQuestion.word.id ? updateWordProgress(w, correct) : w
-    ));
-    
+
+    const wordId = currentQuestion.word.id;
+    const newCorrectValue = (wordCorrectMap[wordId] ?? true) && correct;
+    setWordCorrectMap(prev => ({ ...prev, [wordId]: newCorrectValue }));
+    const newCount = (wordTaskCounts.current[wordId] || 0) - 1;
+    wordTaskCounts.current[wordId] = newCount;
+    if (newCount === 0) {
+      setWords(w => w.map(word => word.id === wordId ? updateWordProgress(word, newCorrectValue) : word));
+      setTrainingWords(words => words.filter(w => w.id !== wordId));
+    }
+
     setTimeout(() => {
-      const remainingWords = trainingWords.filter(w => w.id !== currentQuestion.word.id);
-      if (remainingWords.length > 0) {
-        setTrainingWords(remainingWords);
-        generateQuestion(remainingWords, trainingMode);
+      const nextIndex = taskIndex + 1;
+      if (nextIndex < trainingQueue.length) {
+        setTaskIndex(nextIndex);
+        generateQuestion(trainingQueue[nextIndex]);
         setUserInput('');
         setSelectedLetters([]);
         setShowHint(false);
@@ -389,7 +407,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
         setCurrentView('dashboard');
       }
     }, 2000);
-  }, [trainingMode, currentQuestion, userInput, selectedLetters, userStats.activeBoosts, trainingWords,  generateQuestion, updateWordProgress]);
+  }, [currentQuestion, userInput, selectedLetters, userStats.activeBoosts, wordCorrectMap, trainingQueue, taskIndex, updateWordProgress, generateQuestion]);
 
   // Использовать подсказку
   const useHint = useCallback(() => {
@@ -669,17 +687,17 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
   // Компонент тренажера
   const TrainingComponent = () => {
     if (!currentQuestion) return null;
-    const mode = trainingMode === 'mixed' ? currentQuestion.type : trainingMode;
+    const mode = currentQuestion.type;
 
     // Режим выбора из вариантов
-    if (mode === 'multiple-choice-en-ru' || mode === 'multiple-choice-ru-en') {
+    if (mode === 'multiple-choice-en-ru' || mode === 'word-choice') {
       return (
         <div className="max-w-2xl mx-auto p-6">
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="mb-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-600">
-                  {mode === 'multiple-choice-en-ru' ? 'Выберите перевод:' : 'Choose translation:'}
+                  {mode === 'multiple-choice-en-ru' ? 'Выберите перевод:' : 'Выберите слово:'}
                 </h3>
                 <div className="flex items-center gap-4">
                   <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
@@ -1283,13 +1301,13 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
 
           <div
             className="bg-white rounded-xl p-4 shadow-lg cursor-pointer hover:shadow-xl"
-            onClick={() => setWordListModal({ title: 'На изучении', words: words.filter(w => w.status === 'learning') })}
+            onClick={() => setWordListModal({ title: 'В процессе', words: words.filter(w => w.status === 'learning') })}
           >
             <div className="flex items-center justify-between mb-2">
               <Target className="w-8 h-8 text-yellow-500" />
               <span className="text-2xl font-bold">{words.filter(w => w.status === 'learning').length}</span>
             </div>
-            <p className="text-gray-600">На изучении</p>
+            <p className="text-gray-600">В процессе</p>
           </div>
 
           <div
@@ -1305,10 +1323,9 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
         </div>
 
         {/* Раздел тренировок */}
-        <h3 className="text-xl font-bold mb-4">Выберите тип тренировки:</h3>
-        
+        <h3 className="text-xl font-bold mb-4">Тренировка слов:</h3>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Основные режимы */}
           <button
             onClick={() => {
               if (wordsToReview.length > 0) {
@@ -1327,81 +1344,16 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
             <h3 className="text-lg font-bold mb-1">Повторение</h3>
             <p className="text-sm opacity-90">{wordsToReview.length} слов готовы</p>
           </button>
-          
-          <button
-            onClick={() => startTraining('multiple-choice-en-ru')}
-            className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-          >
-            <Target className="w-8 h-8 mb-2" />
-            <h3 className="text-lg font-bold mb-1">Выбор перевода</h3>
-            <p className="text-sm opacity-90">EN → RU</p>
-          </button>
-          
-          <button
-            onClick={() => startTraining('multiple-choice-ru-en')}
-            className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-          >
-            <Target className="w-8 h-8 mb-2" />
-            <h3 className="text-lg font-bold mb-1">Выбор перевода</h3>
-            <p className="text-sm opacity-90">RU → EN</p>
-          </button>
 
           <button
-            onClick={() => startTraining('mixed')}
+            onClick={startTraining}
             className="bg-gradient-to-r from-orange-500 to-pink-600 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
           >
             <Sparkles className="w-8 h-8 mb-2" />
-            <h3 className="text-lg font-bold mb-1">Комбинированный</h3>
+            <h3 className="text-lg font-bold mb-1">Мульти тренажер</h3>
             <p className="text-sm opacity-90">Смешанные задания</p>
           </button>
 
-          {/* Режимы набора текста */}
-          <button
-            onClick={() => startTraining('typing-en-ru')}
-            className="bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-          >
-            <Keyboard className="w-8 h-8 mb-2" />
-            <h3 className="text-lg font-bold mb-1">Ввод перевода</h3>
-            <p className="text-sm opacity-90">EN → RU</p>
-          </button>
-          
-          <button
-            onClick={() => startTraining('typing-ru-en')}
-            className="bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-          >
-            <Keyboard className="w-8 h-8 mb-2" />
-            <h3 className="text-lg font-bold mb-1">Ввод перевода</h3>
-            <p className="text-sm opacity-90">RU → EN</p>
-          </button>
-          
-          {/* Специальные режимы */}
-          <button
-            onClick={() => startTraining('scramble')}
-            className="bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-          >
-            <Shuffle className="w-8 h-8 mb-2" />
-            <h3 className="text-lg font-bold mb-1">Составь слово</h3>
-            <p className="text-sm opacity-90">Из перемешанных букв</p>
-          </button>
-          
-          <button
-            onClick={() => startTraining('listening')}
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-          >
-            <Headphones className="w-8 h-8 mb-2" />
-            <h3 className="text-lg font-bold mb-1">Аудирование</h3>
-            <p className="text-sm opacity-90">Запись на слух</p>
-          </button>
-          
-          <button
-            onClick={() => startTraining('first-letter')}
-            className="bg-gradient-to-r from-teal-500 to-green-600 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-          >
-            <PenTool className="w-8 h-8 mb-2" />
-            <h3 className="text-lg font-bold mb-1">Первая буква</h3>
-            <p className="text-sm opacity-90">Допиши слово</p>
-          </button>
-          
           <button
             onClick={() => setShowAddWordForm(true)}
             className="bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"

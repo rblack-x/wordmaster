@@ -40,9 +40,11 @@ const WordsList = ({
         <span className="text-xs text-slate-500">{word.level}/{maxLevel}</span>
       </div>
       <div className="flex flex-wrap justify-center gap-2">
-        <span className={`badge-base badge-status-${word.status}`}>
-          {word.status === 'mastered' ? 'Изучено' : word.status === 'learning' ? 'На изучении' : 'Новое'}
-        </span>
+        {word.status !== 'learning' && (
+          <span className={`badge-base badge-status-${word.status}`}>
+            {word.status === 'mastered' ? 'Изучено' : 'Новое'}
+          </span>
+        )}
         <span className="badge-base badge-cat">{word.category}</span>
         <span className="badge-base badge-repeat">Повтор {formatDate(word.nextReview)}</span>
       </div>
@@ -99,9 +101,11 @@ const WordsList = ({
           <span className="text-xs text-slate-500">{word.level}/{maxLevel}</span>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <span className={`badge-base badge-status-${word.status}`}>
-            {word.status === 'mastered' ? 'Изучено' : word.status === 'learning' ? 'На изучении' : 'Новое'}
-          </span>
+          {word.status !== 'learning' && (
+            <span className={`badge-base badge-status-${word.status}`}>
+              {word.status === 'mastered' ? 'Изучено' : 'Новое'}
+            </span>
+          )}
           <span className="badge-base badge-cat">{word.category}</span>
           <span className="badge-base badge-repeat">Повтор {formatDate(word.nextReview)}</span>
           <button
@@ -140,7 +144,7 @@ const WordsList = ({
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
+              className="px-4 py-2 border rounded-lg bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {categories.map(cat => (
                 <option key={cat} value={cat}>

@@ -308,6 +308,44 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
     }
     }, [newWord, categoryOptions]);
 
+  const importCSV = useCallback((file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const imported = lines.map(line => {
+        const [english, russian, category] = line.split(',').map(s => s.trim());
+        if (!english || !russian) return null;
+        return {
+          id: Date.now() + Math.random(),
+          english,
+          russian,
+          category: category || categoryOptions[0],
+          image: '📝',
+          examples: [],
+          pronunciation: '',
+          difficulty: 1,
+          nextReview: Date.now(),
+          reviewCount: 0,
+          errorCount: 0,
+          level: 0,
+          starred: false,
+          status: 'new',
+          createdAt: Date.now(),
+          lastReviewed: null,
+        };
+      }).filter(Boolean);
+      if (imported.length) {
+        setWords(prev => {
+          const updated = [...prev, ...imported];
+          saveWords(updated);
+          return updated;
+        });
+      }
+    };
+    reader.readAsText(file);
+  }, [categoryOptions]);
+
   // Автогенерация слова
   const generateAutoWord = useCallback(() => {
     try {
@@ -1841,6 +1879,7 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
             onWordClick={setSelectedWord}
             addCategory={addCategory}
             generateWord={generateAutoWord}
+            importCSV={importCSV}
           />
         )}
         {currentView === 'shop' && <Shop />}

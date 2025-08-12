@@ -30,6 +30,7 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
   const [selectedLetters, setSelectedLetters] = useState([]);
   const [showAddWordForm, setShowAddWordForm] = useState(false);
   const [wordListModal, setWordListModal] = useState(null);
+  const [selectedWord, setSelectedWord] = useState(null);
   const [newWord, setNewWord] = useState({
     english: '',
     russian: '',
@@ -53,6 +54,7 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
     return {
       ...word,
       reviewCount: word.reviewCount + 1,
+      errorCount: !correct ? (word.errorCount || 0) + 1 : (word.errorCount || 0),
       level,
       nextReview,
       status,
@@ -235,6 +237,7 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
         difficulty: 1,
         nextReview: new Date().getTime(),
         reviewCount: 0,
+        errorCount: 0,
         level: 0,
         starred: false,
         status: 'new',
@@ -326,10 +329,10 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
   // Начать тренировку
   const startTraining = useCallback((mode) => {
     setTrainingMode(mode);
-    const wordsForTraining = words.filter(w => w.status !== 'mastered').slice(0, 10);
+    const wordsForTraining = wordsToReview.slice(0, 10);
 
     if (wordsForTraining.length === 0) {
-      alert('Нет слов для тренировки! Добавьте новые слова или сбросьте прогресс существующих.');
+      alert('Нет слов для повторения! Попробуйте позже.');
       return;
     }
 
@@ -339,7 +342,7 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
     setUserInput('');
     setShowHint(false);
     setSelectedLetters([]);
-  }, [words, generateQuestion]);
+  }, [wordsToReview, generateQuestion]);
 
   // Проверка ответа в тренажере
   const checkAnswer = useCallback((answer) => {
@@ -1143,7 +1146,7 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
                 </div>
               </div>
               <div className="word-right">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center gap-2 self-center w-full">
                   <div className="progress-bar">
                     <div className="progress-bar-fill" style={{ width: `${(w.level / maxLevel) * 100}%` }} />
                   </div>
@@ -1160,6 +1163,56 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
       </div>
     </div>
   );
+
+  const WordDetailsModal = ({ word, onClose }) => {
+    const accuracy = word.reviewCount > 0
+      ? Math.round(((word.reviewCount - word.errorCount) / word.reviewCount) * 100)
+      : 0;
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">{word.english}</h2>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-32 h-32 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden text-6xl">
+              {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
+                <img src={word.image} alt={word.english} className="h-full w-full object-cover" />
+              ) : (
+                <span>{word.image}</span>
+              )}
+            </div>
+            {word.examples && word.examples.length > 0 && (
+              <div className="w-full">
+                <h3 className="font-semibold mb-2 text-center">Примеры</h3>
+                <ul className="list-disc list-inside space-y-1 text-sm text-left">
+                  {word.examples.map((ex, i) => (
+                    <li key={i}>{ex}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="w-full">
+              <h3 className="font-semibold mb-2 text-center">Статистика</h3>
+              <p className="text-sm">Прохождений: {word.reviewCount}</p>
+              <p className="text-sm">Ошибок: {word.errorCount}</p>
+              {word.reviewCount > 0 && (
+                <div className="mt-2">
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div className="bg-green-500 h-3 rounded-full" style={{ width: `${accuracy}%` }} />
+                  </div>
+                  <p className="text-xs text-gray-500 text-center mt-1">Точность {accuracy}%</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Главная панель
   const Dashboard = () => {
@@ -1251,13 +1304,13 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
 
           <div
             className="bg-white rounded-xl p-4 shadow-lg cursor-pointer hover:shadow-xl"
-            onClick={() => setWordListModal({ title: 'Изучаются', words: words.filter(w => w.status === 'learning') })}
+            onClick={() => setWordListModal({ title: 'На изучении', words: words.filter(w => w.status === 'learning') })}
           >
             <div className="flex items-center justify-between mb-2">
               <Target className="w-8 h-8 text-yellow-500" />
               <span className="text-2xl font-bold">{words.filter(w => w.status === 'learning').length}</span>
             </div>
-            <p className="text-gray-600">Изучается</p>
+            <p className="text-gray-600">На изучении</p>
           </div>
 
           <div
@@ -1451,6 +1504,7 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
             setCurrentView={setCurrentView}
             setShowAnswer={setShowAnswer}
             setShowAddWordForm={setShowAddWordForm}
+            onWordClick={setSelectedWord}
           />
         )}
         {currentView === 'shop' && <Shop />}
@@ -1482,6 +1536,9 @@ import { calculateNextReview, reviewIntervals } from './utils/calculateNextRevie
       
       {wordListModal && (
         <WordListModal modal={wordListModal} onClose={() => setWordListModal(null)} />
+      )}
+      {selectedWord && (
+        <WordDetailsModal word={selectedWord} onClose={() => setSelectedWord(null)} />
       )}
       {/* Форма добавления слова */}
       {showAddWordForm && (

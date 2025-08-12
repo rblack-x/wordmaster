@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { BookOpen, Trophy, Star, Clock, Target, Award, Zap, X, Check, RotateCcw, Volume2, Heart, Flame, Plus, Edit2, Save, Shuffle, PenTool, Headphones, Eye, Keyboard, ShoppingCart, BarChart3, TrendingUp, Calendar, Info, Coins, Sparkles, Palette, Music, Rocket } from 'lucide-react';
-import './styles/wordStyles.css';
+import './styles/word-page.css';
 import AddWordForm from './AddWordForm';
 import WordsList from './WordsList';
 import { initialWords } from './data/initialWords';

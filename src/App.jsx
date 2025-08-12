@@ -5,15 +5,16 @@ import AddWordForm from './AddWordForm';
 import WordsList from './WordsList';
 import { initialWords } from './data/initialWords';
 import { shopItems } from './data/shopItems';
-import { loadSavedData, saveWords, saveStats } from './utils/storage';
+import { loadSavedData, saveWords, saveStats, loadCategories, saveCategories } from './utils/storage';
 import { formatDate } from './utils/formatDate';
 import { calculateNextReview, reviewIntervals } from './utils/calculateNextReview';
 
-const categoryOptions = ['Путешествия', 'Природа', 'Эмоции', 'Образование', 'Технологии', 'Еда', 'Дом', 'Животные'];
+const defaultCategories = ['Разное', 'Путешествия', 'Природа', 'Эмоции', 'Образование', 'Технологии', 'Еда', 'Дом', 'Животные'];
 
   const App = () => {
   const savedData = loadSavedData(initialWords);
   const maxLevel = reviewIntervals.length;
+  const [categoryOptions, setCategoryOptions] = useState(() => loadCategories(defaultCategories));
   const categories = ['all', ...categoryOptions];
   const [words, setWords] = useState(savedData.words);
   const [currentView, setCurrentView] = useState('dashboard');
@@ -104,6 +105,10 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
   useEffect(() => {
     saveStats(userStats);
   }, [userStats]);
+
+  useEffect(() => {
+    saveCategories(categoryOptions);
+  }, [categoryOptions]);
   // Фильтрация слов по категории
   const filteredWords = useMemo(() =>
     selectedCategory === 'all'
@@ -122,6 +127,13 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
     words.filter(w => w.reviewCount === 0),
     [words]
   );
+
+  const addCategory = () => {
+    const name = prompt('Введите название категории');
+    if (name && !categoryOptions.includes(name)) {
+      setCategoryOptions(prev => [...prev, name]);
+    }
+  };
 
   // Покупка/активация предметов в магазине
   const purchaseItem = useCallback((item) => {
@@ -235,7 +247,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
       const word = {
         ...newWord,
         id: Date.now(),
-        category: newWord.category || 'Мои слова',
+        category: newWord.category || 'Разное',
         image: newWord.image || '📝',
         examples: newWord.examples.filter(ex => ex.length > 0),
         difficulty: 1,
@@ -1325,7 +1337,14 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
         </div>
         <ul className="space-y-2">
           {modal.words.map(w => (
-              <li key={w.id} className="word-card-list">
+              <li
+                key={w.id}
+                className="word-card-list cursor-pointer"
+                onClick={() => {
+                  setSelectedWord(w);
+                  onClose();
+                }}
+              >
                 <div className="word-left">
                   <div className="word-media">
                     {typeof w.image === 'string' && (w.image.startsWith('http') || w.image.startsWith('data:')) ? (
@@ -1641,6 +1660,7 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
             setShowAnswer={setShowAnswer}
             setShowAddWordForm={setShowAddWordForm}
             onWordClick={setSelectedWord}
+            addCategory={addCategory}
           />
         )}
         {currentView === 'shop' && <Shop />}

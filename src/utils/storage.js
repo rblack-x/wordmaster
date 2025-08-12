@@ -50,3 +50,21 @@ export const saveStats = (stats) => {
     console.error('Error saving stats:', error);
   }
 };
+
+export const loadCategories = (defaults) => {
+  try {
+    const saved = localStorage.getItem('wordmaster_categories');
+    return saved ? JSON.parse(saved) : defaults;
+  } catch (error) {
+    console.error('Error loading categories:', error);
+    return defaults;
+  }
+};
+
+export const saveCategories = (categories) => {
+  try {
+    localStorage.setItem('wordmaster_categories', JSON.stringify(categories));
+  } catch (error) {
+    console.error('Error saving categories:', error);
+  }
+};

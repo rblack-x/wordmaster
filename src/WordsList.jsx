@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2, ChevronRight, Plus, LayoutGrid, List, FolderPlus, Wand2 } from 'lucide-react';
 import { formatDate } from './utils/formatDate';
 
@@ -19,6 +19,41 @@ const WordsList = ({
   generateWord,
 }) => {
   const [viewMode, setViewMode] = useState('grid');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  const itemsPerPage = viewMode === 'grid' ? 18 : 25;
+  const totalPages = Math.ceil(filteredWords.length / itemsPerPage);
+  const start = (currentPage - 1) * itemsPerPage;
+  const currentWords = filteredWords.slice(start, start + itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedIds([]);
+  }, [viewMode, filteredWords]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages || 1);
+  }, [currentPage, totalPages]);
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const selectAll = () => {
+    const pageIds = currentWords.map(w => w.id);
+    const allSelected = pageIds.every(id => selectedIds.includes(id));
+    if (allSelected) {
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+    } else {
+      setSelectedIds(prev => [...new Set([...prev, ...pageIds])]);
+    }
+  };
+
+  const deleteSelected = () => {
+    selectedIds.forEach(id => deleteWord(id));
+    setSelectedIds([]);
+  };
 
   const renderGridItem = (word) => {
     const isAvailable = word.nextReview <= Date.now();
@@ -60,6 +95,7 @@ const WordsList = ({
             onClick={(e) => {
               e.stopPropagation();
               deleteWord(word.id);
+              setSelectedIds(prev => prev.filter(id => id !== word.id));
             }}
             className="icon-btn icon-danger"
           >
@@ -153,6 +189,7 @@ const WordsList = ({
             onClick={(e) => {
               e.stopPropagation();
               deleteWord(word.id);
+              setSelectedIds(prev => prev.filter(id => id !== word.id));
             }}
             className="icon-btn icon-danger"
           >
@@ -170,6 +207,15 @@ const WordsList = ({
           >
             <ChevronRight className="w-5 h-5" />
           </button>
+          <input
+            type="checkbox"
+            checked={selectedIds.includes(word.id)}
+            onChange={(e) => {
+              e.stopPropagation();
+              toggleSelect(word.id);
+            }}
+            className="w-4 h-4 ml-2"
+          />
         </div>
       </div>
     );
@@ -220,16 +266,54 @@ const WordsList = ({
               <Plus className="w-5 h-5" />
               Добавить слово
             </button>
+            {viewMode === 'list' && (
+              <>
+                <button
+                  onClick={selectAll}
+                  className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+                >
+                  {currentWords.length > 0 && currentWords.every(w => selectedIds.includes(w.id)) ? 'Снять' : 'Выделить все'}
+                </button>
+                {selectedIds.length > 0 && (
+                  <button
+                    onClick={deleteSelected}
+                    className="px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600"
+                  >
+                    Удалить выбранные
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
 
         {viewMode === 'grid' ? (
           <div className="words-grid">
-            {filteredWords.map(renderGridItem)}
+            {currentWords.map(renderGridItem)}
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {filteredWords.map(renderListItem)}
+            {currentWords.map(renderListItem)}
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-4">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 bg-gray-100 rounded disabled:opacity-50"
+            >
+              Назад
+            </button>
+            <span className="text-sm">{currentPage} / {totalPages}</span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 bg-gray-100 rounded disabled:opacity-50"
+            >
+              Вперед
+            </button>
           </div>
         )}
       </div>

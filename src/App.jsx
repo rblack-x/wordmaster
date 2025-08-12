@@ -221,7 +221,11 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
   // Удаление слова
   const deleteWord = useCallback((wordId) => {
     if (window.confirm('Вы уверены, что хотите удалить это слово?')) {
-      setWords(prev => prev.filter(w => w.id !== wordId));
+      setWords(prev => {
+        const updated = prev.filter(w => w.id !== wordId);
+        saveWords(updated);
+        return updated;
+      });
     }
   }, []);
 
@@ -244,8 +248,12 @@ const categoryOptions = ['Путешествия', 'Природа', 'Эмоци
         createdAt: new Date().getTime(),
         lastReviewed: null
       };
-      
-      setWords(prev => [...prev, word]);
+
+      setWords(prev => {
+        const updated = [...prev, word];
+        saveWords(updated);
+        return updated;
+      });
       setNewWord({
         english: '',
         russian: '',

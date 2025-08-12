@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { BookOpen, Trophy, Star, Clock, Target, Award, Zap, ChevronRight, X, Check, RotateCcw, Volume2, Heart, Flame, Plus, Edit2, Trash2, Save, Shuffle, PenTool, Headphones, Eye, Keyboard, ShoppingCart, BarChart3, TrendingUp, Calendar, Info, Coins, Sparkles, Palette, Music, Rocket } from 'lucide-react';
+import { BookOpen, Trophy, Star, Clock, Target, Award, Zap, ChevronRight, X, Check, RotateCcw, Volume2, Heart, Flame, Plus, Edit2, Trash2, Save, Shuffle, PenTool, Headphones, Eye, Keyboard, ShoppingCart, BarChart3, TrendingUp, Calendar, Info, Coins, Sparkles, Palette, Music, Rocket, List, LayoutGrid } from 'lucide-react';
+import './styles/wordStyles.css';
 import AddWordForm from './AddWordForm';
 import { initialWords } from './data/initialWords';
 import { shopItems } from './data/shopItems';
@@ -13,6 +14,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [reviewWords, setReviewWords] = useState([]);
   const [showAnswer, setShowAnswer] = useState(false);
   const [userStats, setUserStats] = useState(savedData.stats);
   const [trainingMode, setTrainingMode] = useState(null);
@@ -143,7 +145,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
 
   // Обработка ответа на карточке
   const handleCardAnswer = useCallback((correct) => {
-    const currentWord = filteredWords[currentCardIndex];
+    const currentWord = reviewWords[currentCardIndex];
     const updatedWords = words.map(w => {
       if (w.id === currentWord.id) {
         const newCorrectCount = correct ? w.correctCount + 1 : 0;
@@ -188,14 +190,14 @@ import { calculateNextReview } from './utils/calculateNextReview';
     // Переход к следующей карточке
     setTimeout(() => {
       setShowAnswer(false);
-      if (currentCardIndex < filteredWords.length - 1) {
+      if (currentCardIndex < reviewWords.length - 1) {
         setCurrentCardIndex(currentCardIndex + 1);
       } else {
         setCurrentView('dashboard');
         setCurrentCardIndex(0);
       }
     }, 1000);
-  }, [words, filteredWords, currentCardIndex, userStats.activeBoosts]);
+  }, [words, reviewWords, currentCardIndex, userStats.activeBoosts]);
 
   // Переключение закрепленных слов
   const toggleStar = useCallback((wordId) => {
@@ -253,9 +255,15 @@ import { calculateNextReview } from './utils/calculateNextReview';
   const generateQuestion = useCallback((wordsPool, mode) => {
     if (wordsPool.length === 0) return;
 
+    let actualMode = mode;
+    if (mode === 'mixed') {
+      const modes = ['multiple-choice-en-ru', 'multiple-choice-ru-en', 'typing-en-ru', 'typing-ru-en', 'scramble', 'listening', 'first-letter'];
+      actualMode = modes[Math.floor(Math.random() * modes.length)];
+    }
+
     const correctWord = wordsPool[Math.floor(Math.random() * wordsPool.length)];
 
-    if (mode === 'multiple-choice-en-ru' || mode === 'multiple-choice-ru-en') {
+    if (actualMode === 'multiple-choice-en-ru' || actualMode === 'multiple-choice-ru-en') {
       const otherWords = words.filter(w => w.id !== correctWord.id);
       const wrongAnswers = [];
 
@@ -268,31 +276,36 @@ import { calculateNextReview } from './utils/calculateNextReview';
       setCurrentQuestion({
         word: correctWord,
         answers: allAnswers,
-        correctId: correctWord.id
+        correctId: correctWord.id,
+        type: actualMode
       });
-    } else if (mode === 'typing-en-ru' || mode === 'typing-ru-en') {
+    } else if (actualMode === 'typing-en-ru' || actualMode === 'typing-ru-en') {
       setCurrentQuestion({
         word: correctWord,
-        correctAnswer: mode === 'typing-en-ru' ? correctWord.russian : correctWord.english
+        correctAnswer: actualMode === 'typing-en-ru' ? correctWord.russian : correctWord.english,
+        type: actualMode
       });
-    } else if (mode === 'scramble') {
+    } else if (actualMode === 'scramble') {
       const letters = correctWord.english.toLowerCase().split('');
       const scrambled = [...letters].sort(() => Math.random() - 0.5);
       setScrambledLetters(scrambled.map((letter, index) => ({ letter, id: index, used: false })));
       setCurrentQuestion({
         word: correctWord,
-        correctAnswer: correctWord.english.toLowerCase()
+        correctAnswer: correctWord.english.toLowerCase(),
+        type: actualMode
       });
-    } else if (mode === 'listening') {
-      setCurrentQuestion({
-        word: correctWord,
-        correctAnswer: correctWord.english
-      });
-    } else if (mode === 'first-letter') {
+    } else if (actualMode === 'listening') {
       setCurrentQuestion({
         word: correctWord,
         correctAnswer: correctWord.english,
-        hint: correctWord.english[0].toUpperCase() + '_'.repeat(correctWord.english.length - 1)
+        type: actualMode
+      });
+    } else if (actualMode === 'first-letter') {
+      setCurrentQuestion({
+        word: correctWord,
+        correctAnswer: correctWord.english,
+        hint: correctWord.english[0].toUpperCase() + '_'.repeat(correctWord.english.length - 1),
+        type: actualMode
       });
     }
 
@@ -321,13 +334,14 @@ import { calculateNextReview } from './utils/calculateNextReview';
   // Проверка ответа в тренажере
   const checkAnswer = useCallback((answer) => {
     let correct = false;
-    
-    if (trainingMode === 'multiple-choice-en-ru' || trainingMode === 'multiple-choice-ru-en') {
+    const mode = trainingMode === 'mixed' ? currentQuestion.type : trainingMode;
+
+    if (mode === 'multiple-choice-en-ru' || mode === 'multiple-choice-ru-en') {
       setSelectedAnswer(answer);
       correct = answer === currentQuestion.correctId;
-    } else if (trainingMode === 'typing-en-ru' || trainingMode === 'typing-ru-en' || trainingMode === 'listening' || trainingMode === 'first-letter') {
+    } else if (mode === 'typing-en-ru' || mode === 'typing-ru-en' || mode === 'listening' || mode === 'first-letter') {
       correct = userInput.toLowerCase().trim() === currentQuestion.correctAnswer.toLowerCase();
-    } else if (trainingMode === 'scramble') {
+    } else if (mode === 'scramble') {
       const assembled = selectedLetters.map(l => l.letter).join('');
       correct = assembled === currentQuestion.correctAnswer;
     }
@@ -620,6 +634,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
           <Volume2 className="w-4 h-4" />
           {word.pronunciation}
         </p>
+        <p className="text-sm text-gray-500 mt-2">Прогресс: {word.correctCount}/5</p>
       </div>
       
       {showAnswer && (
@@ -668,16 +683,17 @@ import { calculateNextReview } from './utils/calculateNextReview';
   // Компонент тренажера
   const TrainingComponent = () => {
     if (!currentQuestion) return null;
-    
+    const mode = trainingMode === 'mixed' ? currentQuestion.type : trainingMode;
+
     // Режим выбора из вариантов
-    if (trainingMode === 'multiple-choice-en-ru' || trainingMode === 'multiple-choice-ru-en') {
+    if (mode === 'multiple-choice-en-ru' || mode === 'multiple-choice-ru-en') {
       return (
         <div className="max-w-2xl mx-auto p-6">
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="mb-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-600">
-                  {trainingMode === 'multiple-choice-en-ru' ? 'Выберите перевод:' : 'Choose translation:'}
+                  {mode === 'multiple-choice-en-ru' ? 'Выберите перевод:' : 'Choose translation:'}
                 </h3>
                 <div className="flex items-center gap-4">
                   <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
@@ -700,7 +716,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
                   <span className="text-6xl mb-4 inline-block">{currentQuestion.word.image}</span>
                 )}
                 <h2 className="text-3xl font-bold text-gray-800">
-                  {trainingMode === 'multiple-choice-en-ru' ? currentQuestion.word.english : currentQuestion.word.russian}
+                  {mode === 'multiple-choice-en-ru' ? currentQuestion.word.english : currentQuestion.word.russian}
                 </h2>
               </div>
             </div>
@@ -722,7 +738,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
                   }`}
                 >
                   <p className="font-semibold">
-                    {trainingMode === 'multiple-choice-en-ru' ? answer.russian : answer.english}
+                    {mode === 'multiple-choice-en-ru' ? answer.russian : answer.english}
                   </p>
                 </button>
               ))}
@@ -733,14 +749,14 @@ import { calculateNextReview } from './utils/calculateNextReview';
     }
     
     // Режим ввода текста
-    if (trainingMode === 'typing-en-ru' || trainingMode === 'typing-ru-en') {
+    if (mode === 'typing-en-ru' || mode === 'typing-ru-en') {
       return (
         <div className="max-w-2xl mx-auto p-6">
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="mb-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-600">
-                  {trainingMode === 'typing-en-ru' ? 'Введите перевод на русский:' : 'Type in English:'}
+                  {mode === 'typing-en-ru' ? 'Введите перевод на русский:' : 'Type in English:'}
                 </h3>
                 <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
                   Осталось: {trainingWords.length}
@@ -758,7 +774,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
                   <span className="text-6xl mb-4 inline-block">{currentQuestion.word.image}</span>
                 )}
                 <h2 className="text-3xl font-bold text-gray-800">
-                  {trainingMode === 'typing-en-ru' ? currentQuestion.word.english : currentQuestion.word.russian}
+                  {mode === 'typing-en-ru' ? currentQuestion.word.english : currentQuestion.word.russian}
                 </h2>
                 {showHint && (
                   <p className="text-gray-500 mt-2">
@@ -821,7 +837,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
     }
     
     // Режим составления слова из букв
-    if (trainingMode === 'scramble') {
+    if (mode === 'scramble') {
       const assembled = selectedLetters.map(l => l.letter).join('');
       
       return (
@@ -934,7 +950,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
     }
     
     // Режим аудирования
-    if (trainingMode === 'listening') {
+    if (mode === 'listening') {
       return (
         <div className="max-w-2xl mx-auto p-6">
           <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -1021,7 +1037,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
     }
     
     // Режим первой буквы
-    if (trainingMode === 'first-letter') {
+    if (mode === 'first-letter') {
       return (
         <div className="max-w-2xl mx-auto p-6">
           <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -1101,100 +1117,173 @@ import { calculateNextReview } from './utils/calculateNextReview';
   };
 
   // Компонент списка слов
-  const WordsList = () => (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="mb-6 flex justify-between items-center">
-        <div className="flex flex-wrap gap-2">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                selectedCategory === cat
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {cat === 'all' ? 'Все' : cat}
-            </button>
-          ))}
+  const WordsList = () => {
+    const [viewMode, setViewMode] = useState('list');
+
+    const renderGridItem = (word) => (
+      <div key={word.id} className="word-card-grid">
+        <div className="mb-2">
+          {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
+            <img
+              src={word.image}
+              alt={word.english}
+              className="w-12 h-12 object-cover rounded"
+            />
+          ) : (
+            <span className="text-3xl">{word.image}</span>
+          )}
         </div>
-        
-        <button
-          onClick={() => setShowAddWordForm(true)}
-          className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Добавить слово
-        </button>
-      </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {filteredWords.map(word => (
-          <div
-            key={word.id}
-            className="bg-white rounded-lg shadow p-4 flex flex-col items-center hover:shadow-lg transition-shadow"
+        <h3 className="font-bold text-lg text-center">{word.english}</h3>
+        <p className="text-gray-600 text-center">{word.russian}</p>
+        <p className="text-xs text-gray-500 mt-1">Прогресс: {word.correctCount}/5</p>
+        <div className="flex gap-2 mt-2 flex-wrap justify-center">
+          <span className={`badge-base ${
+            word.status === 'mastered' ? 'bg-green-100 text-green-700' :
+            word.status === 'learning' ? 'bg-yellow-100 text-yellow-700' :
+            'bg-gray-100 text-gray-700'
+          }`}>
+            {word.status === 'mastered' ? 'Изучено' :
+             word.status === 'learning' ? 'Изучается' : 'Новое'}
+          </span>
+          <span className="badge-base bg-blue-100 text-blue-700">
+            {word.category}
+          </span>
+          <span className="badge-base bg-purple-100 text-purple-700">
+            Повтор {formatDate(word.nextReview)}
+          </span>
+        </div>
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={() => toggleStar(word.id)}
+            className={`p-2 rounded-full transition-colors ${
+              word.starred ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400'
+            }`}
           >
-            <div className="mb-2">
-              {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
-                <img
-                  src={word.image}
-                  alt={word.english}
-                  className="w-12 h-12 object-cover rounded"
-                />
-              ) : (
-                <span className="text-3xl">{word.image}</span>
-              )}
-            </div>
-            <h3 className="font-bold text-lg text-center">{word.english}</h3>
-            <p className="text-gray-600 text-center">{word.russian}</p>
-            <div className="flex gap-2 mt-2 flex-wrap justify-center">
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                word.status === 'mastered' ? 'bg-green-100 text-green-700' :
-                word.status === 'learning' ? 'bg-yellow-100 text-yellow-700' :
-                'bg-gray-100 text-gray-700'
-              }`}>
-                {word.status === 'mastered' ? 'Изучено' :
-                 word.status === 'learning' ? 'Изучается' : 'Новое'}
-              </span>
-              <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
-                {word.category}
-              </span>
-              <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700">
-                Повтор {formatDate(word.nextReview)}
-              </span>
-            </div>
-            <div className="flex gap-2 mt-2">
+            <Star className={`w-5 h-5 ${word.starred ? 'fill-current' : ''}`} />
+          </button>
+          <button
+            onClick={() => deleteWord(word.id)}
+            className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => {
+              setCurrentCardIndex(filteredWords.findIndex(w => w.id === word.id));
+              setReviewWords(filteredWords);
+              setCurrentView('cards');
+              setShowAnswer(false);
+            }}
+            className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    );
+
+    const renderListItem = (word) => (
+      <div key={word.id} className="word-card-list">
+        <div className="flex items-center gap-3">
+          {typeof word.image === 'string' && (word.image.startsWith('http') || word.image.startsWith('data:')) ? (
+            <img src={word.image} alt={word.english} className="w-12 h-12 object-cover rounded" />
+          ) : (
+            <span className="text-3xl">{word.image}</span>
+          )}
+          <div>
+            <h3 className="font-bold text-lg">{word.english}</h3>
+            <p className="text-gray-600">{word.russian}</p>
+            <p className="text-xs text-gray-500">Прогресс: {word.correctCount}/5</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`badge-base ${
+            word.status === 'mastered' ? 'bg-green-100 text-green-700' :
+            word.status === 'learning' ? 'bg-yellow-100 text-yellow-700' :
+            'bg-gray-100 text-gray-700'
+          }`}>
+            {word.status === 'mastered' ? 'Изучено' :
+             word.status === 'learning' ? 'Изучается' : 'Новое'}
+          </span>
+          <span className="badge-base bg-blue-100 text-blue-700">{word.category}</span>
+          <span className="badge-base bg-purple-100 text-purple-700">Повтор {formatDate(word.nextReview)}</span>
+          <button
+            onClick={() => toggleStar(word.id)}
+            className={`p-2 rounded-full transition-colors ${
+              word.starred ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400'
+            }`}
+          >
+            <Star className={`w-5 h-5 ${word.starred ? 'fill-current' : ''}`} />
+          </button>
+          <button
+            onClick={() => deleteWord(word.id)}
+            className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => {
+              setCurrentCardIndex(filteredWords.findIndex(w => w.id === word.id));
+              setReviewWords(filteredWords);
+              setCurrentView('cards');
+              setShowAnswer(false);
+            }}
+            className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="mb-6 flex justify-between items-center">
+          <div className="flex flex-wrap gap-2">
+            {categories.map(cat => (
               <button
-                onClick={() => toggleStar(word.id)}
-                className={`p-2 rounded-full transition-colors ${
-                  word.starred ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400'
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  selectedCategory === cat
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                <Star className={`w-5 h-5 ${word.starred ? 'fill-current' : ''}`} />
+                {cat === 'all' ? 'Все' : cat}
               </button>
-              <button
-                onClick={() => deleteWord(word.id)}
-                className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => {
-                  setCurrentCardIndex(filteredWords.findIndex(w => w.id === word.id));
-                  setCurrentView('cards');
-                  setShowAnswer(false);
-                }}
-                className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+            ))}
           </div>
-        ))}
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+            >
+              {viewMode === 'list' ? <LayoutGrid className="w-5 h-5" /> : <List className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={() => setShowAddWordForm(true)}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Добавить слово
+            </button>
+          </div>
+        </div>
+
+        {viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredWords.map(renderGridItem)}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredWords.map(renderListItem)}
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   // Модальное окно со списком слов
   const WordListModal = ({ modal, onClose }) => (
@@ -1344,6 +1433,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
           <button
             onClick={() => {
               if (wordsToReview.length > 0) {
+                setReviewWords(wordsToReview);
                 setCurrentCardIndex(0);
                 setCurrentView('cards');
                 setShowAnswer(false);
@@ -1376,7 +1466,16 @@ import { calculateNextReview } from './utils/calculateNextReview';
             <h3 className="text-lg font-bold mb-1">Выбор перевода</h3>
             <p className="text-sm opacity-90">RU → EN</p>
           </button>
-          
+
+          <button
+            onClick={() => startTraining('mixed')}
+            className="bg-gradient-to-r from-orange-500 to-pink-600 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+          >
+            <Sparkles className="w-8 h-8 mb-2" />
+            <h3 className="text-lg font-bold mb-1">Комбинированный</h3>
+            <p className="text-sm opacity-90">Смешанные задания</p>
+          </button>
+
           {/* Режимы набора текста */}
           <button
             onClick={() => startTraining('typing-en-ru')}
@@ -1494,11 +1593,11 @@ import { calculateNextReview } from './utils/calculateNextReview';
         {currentView === 'words' && <WordsList />}
         {currentView === 'shop' && <Shop />}
         {currentView === 'stats' && <Statistics />}
-        {currentView === 'cards' && filteredWords.length > 0 && (
+        {currentView === 'cards' && reviewWords.length > 0 && (
           <div className="px-6">
             <div className="max-w-md mx-auto mb-4">
               <div className="flex justify-between items-center text-sm text-gray-600">
-                <span>Карточка {currentCardIndex + 1} из {filteredWords.length}</span>
+                <span>Карточка {currentCardIndex + 1} из {reviewWords.length}</span>
                 <button
                   onClick={() => setCurrentView('dashboard')}
                   className="text-gray-500 hover:text-gray-700"
@@ -1509,11 +1608,11 @@ import { calculateNextReview } from './utils/calculateNextReview';
               <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                 <div
                   className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all"
-                  style={{ width: `${((currentCardIndex + 1) / filteredWords.length) * 100}%` }}
+                  style={{ width: `${((currentCardIndex + 1) / reviewWords.length) * 100}%` }}
                 />
               </div>
             </div>
-            <WordCard word={filteredWords[currentCardIndex]} />
+            <WordCard word={reviewWords[currentCardIndex]} />
           </div>
         )}
         {currentView === 'training' && <TrainingComponent />}

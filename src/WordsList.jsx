@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Plus, LayoutGrid, List, FolderPlus, Wand2, Upload } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Trash2, Plus, LayoutGrid, List, FolderPlus, Wand2, Upload, X } from 'lucide-react';
 import { formatDate } from './utils/formatDate';
 
 const WordsList = ({
@@ -19,16 +19,30 @@ const WordsList = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]);
   const fileInputRef = useRef(null);
+  const [sortOption, setSortOption] = useState('date');
+  const [showImportModal, setShowImportModal] = useState(false);
+
+  const sortedWords = useMemo(() => {
+    const wordsCopy = [...filteredWords];
+    switch (sortOption) {
+      case 'alpha':
+        return wordsCopy.sort((a, b) => a.english.localeCompare(b.english));
+      case 'level':
+        return wordsCopy.sort((a, b) => b.level - a.level);
+      default:
+        return wordsCopy.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    }
+  }, [filteredWords, sortOption]);
 
   const itemsPerPage = viewMode === 'grid' ? 18 : 25;
-  const totalPages = Math.ceil(filteredWords.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedWords.length / itemsPerPage);
   const start = (currentPage - 1) * itemsPerPage;
-  const currentWords = filteredWords.slice(start, start + itemsPerPage);
+  const currentWords = sortedWords.slice(start, start + itemsPerPage);
 
   useEffect(() => {
     setCurrentPage(1);
     setSelectedIds([]);
-  }, [viewMode, filteredWords]);
+  }, [viewMode, filteredWords, sortOption]);
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages || 1);
@@ -48,6 +62,15 @@ const WordsList = ({
   const deleteSelected = () => {
     selectedIds.forEach(id => deleteWord(id));
     setSelectedIds([]);
+  };
+
+  const handleImportFile = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      importCSV(file);
+      e.target.value = '';
+      setShowImportModal(false);
+    }
   };
 
   const renderGridItem = (word) => {
@@ -235,6 +258,15 @@ const WordsList = ({
             >
               <FolderPlus className="w-5 h-5" />
             </button>
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+              className="px-4 py-2 border rounded-lg bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="date">По дате</option>
+              <option value="alpha">По алфавиту</option>
+              <option value="level">По уровню</option>
+            </select>
           </div>
 
           <div className="flex flex-col items-end gap-2">
@@ -253,31 +285,18 @@ const WordsList = ({
                 Сгенерировать
               </button>
               <button
+                onClick={() => setShowImportModal(true)}
+                className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2"
+              >
+                <Upload className="w-5 h-5" />
+                Импорт CSV
+              </button>
+              <button
                 onClick={() => setShowAddWordForm(true)}
                 className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
               >
                 <Plus className="w-5 h-5" />
                 Добавить слово
-              </button>
-              <input
-                type="file"
-                accept=".csv"
-                ref={fileInputRef}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    importCSV(file);
-                    e.target.value = '';
-                  }
-                }}
-                className="hidden"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2"
-              >
-                <Upload className="w-5 h-5" />
-                Импорт CSV
               </button>
             </div>
             {viewMode === 'list' && (
@@ -337,6 +356,37 @@ const WordsList = ({
           </div>
         )}
       </div>
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Импорт слов</h2>
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Файл должен содержать колонки: английское слово, русский перевод, категория (необязательно). Каждая строка — отдельное слово.
+            </p>
+            <input
+              type="file"
+              accept=".csv"
+              ref={fileInputRef}
+              onChange={handleImportFile}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors"
+            >
+              Загрузить файл
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

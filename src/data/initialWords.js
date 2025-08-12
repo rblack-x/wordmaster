@@ -10,11 +10,11 @@ export const initialWords = [
     difficulty: 1,
     nextReview: new Date().getTime(),
     reviewCount: 0,
-    correctCount: 0,
     starred: false,
     status: 'new',
     createdAt: new Date().getTime(),
-    lastReviewed: null
+    lastReviewed: null,
+    level: 0
   },
   {
     id: 2,
@@ -27,11 +27,11 @@ export const initialWords = [
     difficulty: 1,
     nextReview: new Date().getTime(),
     reviewCount: 0,
-    correctCount: 0,
     starred: false,
     status: 'new',
     createdAt: new Date().getTime(),
-    lastReviewed: null
+    lastReviewed: null,
+    level: 0
   },
   {
     id: 3,
@@ -44,11 +44,11 @@ export const initialWords = [
     difficulty: 2,
     nextReview: new Date().getTime(),
     reviewCount: 0,
-    correctCount: 0,
     starred: false,
     status: 'new',
     createdAt: new Date().getTime(),
-    lastReviewed: null
+    lastReviewed: null,
+    level: 0
   },
   {
     id: 4,
@@ -61,11 +61,11 @@ export const initialWords = [
     difficulty: 2,
     nextReview: new Date().getTime(),
     reviewCount: 0,
-    correctCount: 0,
     starred: false,
     status: 'new',
     createdAt: new Date().getTime(),
-    lastReviewed: null
+    lastReviewed: null,
+    level: 0
   },
   {
     id: 5,
@@ -78,11 +78,11 @@ export const initialWords = [
     difficulty: 1,
     nextReview: new Date().getTime(),
     reviewCount: 0,
-    correctCount: 0,
     starred: false,
     status: 'new',
     createdAt: new Date().getTime(),
-    lastReviewed: null
+    lastReviewed: null,
+    level: 0
   }
 ];
 

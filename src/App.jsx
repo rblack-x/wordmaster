@@ -6,10 +6,11 @@ import { initialWords } from './data/initialWords';
 import { shopItems } from './data/shopItems';
 import { loadSavedData, saveWords, saveStats } from './utils/storage';
 import { formatDate } from './utils/formatDate';
-import { calculateNextReview } from './utils/calculateNextReview';
+import { calculateNextReview, reviewIntervals } from './utils/calculateNextReview';
 
   const App = () => {
   const savedData = loadSavedData(initialWords);
+  const maxLevel = reviewIntervals.length;
   const [words, setWords] = useState(savedData.words);
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -36,6 +37,27 @@ import { calculateNextReview } from './utils/calculateNextReview';
     examples: ['', ''],
     pronunciation: ''
   });
+
+  const updateWordProgress = useCallback((word, correct) => {
+    const now = Date.now();
+    const intervalPassed = now >= word.nextReview;
+    let level = word.level ?? 0;
+    if (correct && intervalPassed) {
+      level = Math.min(level + 1, maxLevel);
+    } else if (!correct) {
+      level = 0;
+    }
+    const nextReview = (!correct || intervalPassed) ? calculateNextReview(level) : word.nextReview;
+    const status = level >= maxLevel ? 'mastered' : level > 0 ? 'learning' : 'new';
+    return {
+      ...word,
+      reviewCount: word.reviewCount + 1,
+      level,
+      nextReview,
+      status,
+      lastReviewed: now
+    };
+  }, [maxLevel]);
 
   // Проверка ежедневной серии при загрузке
   useEffect(() => {
@@ -146,23 +168,10 @@ import { calculateNextReview } from './utils/calculateNextReview';
   // Обработка ответа на карточке
   const handleCardAnswer = useCallback((correct) => {
     const currentWord = reviewWords[currentCardIndex];
-    const updatedWords = words.map(w => {
-      if (w.id === currentWord.id) {
-        const newCorrectCount = correct ? w.correctCount + 1 : 0;
-        const newStatus = newCorrectCount >= 5 ? 'mastered' : newCorrectCount > 0 ? 'learning' : 'new';
-        
-        return {
-          ...w,
-          reviewCount: w.reviewCount + 1,
-          correctCount: newCorrectCount,
-          nextReview: calculateNextReview(w, correct),
-          status: newStatus,
-          lastReviewed: new Date().getTime()
-        };
-      }
-      return w;
-    });
-    
+    const updatedWords = words.map(w =>
+      w.id === currentWord.id ? updateWordProgress(w, correct) : w
+    );
+
     setWords(updatedWords);
     
     // Проверка активных бустов
@@ -197,7 +206,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
         setCurrentCardIndex(0);
       }
     }, 1000);
-  }, [words, reviewWords, currentCardIndex, userStats.activeBoosts]);
+  }, [words, reviewWords, currentCardIndex, userStats.activeBoosts, updateWordProgress]);
 
   // Переключение закрепленных слов
   const toggleStar = useCallback((wordId) => {
@@ -225,7 +234,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
         difficulty: 1,
         nextReview: new Date().getTime(),
         reviewCount: 0,
-        correctCount: 0,
+        level: 0,
         starred: false,
         status: 'new',
         createdAt: new Date().getTime(),
@@ -368,20 +377,9 @@ import { calculateNextReview } from './utils/calculateNextReview';
     }
     
     // Обновляем статистику слова
-    setWords(prev => prev.map(w => {
-      if (w.id === currentQuestion.word.id) {
-        const newCorrectCount = correct ? w.correctCount + 1 : Math.max(0, w.correctCount - 1);
-        return {
-          ...w,
-          reviewCount: w.reviewCount + 1,
-          correctCount: newCorrectCount,
-          nextReview: calculateNextReview(w, correct),
-          status: newCorrectCount >= 5 ? 'mastered' : newCorrectCount > 0 ? 'learning' : 'new',
-          lastReviewed: new Date().getTime()
-        };
-      }
-      return w;
-    }));
+    setWords(prev => prev.map(w =>
+      w.id === currentQuestion.word.id ? updateWordProgress(w, correct) : w
+    ));
     
     setTimeout(() => {
       const remainingWords = trainingWords.filter(w => w.id !== currentQuestion.word.id);
@@ -395,7 +393,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
         setCurrentView('dashboard');
       }
     }, 2000);
-  }, [trainingMode, currentQuestion, userInput, selectedLetters, userStats.activeBoosts, trainingWords,  generateQuestion]);
+  }, [trainingMode, currentQuestion, userInput, selectedLetters, userStats.activeBoosts, trainingWords,  generateQuestion, updateWordProgress]);
 
   // Использовать подсказку
   const useHint = useCallback(() => {
@@ -634,7 +632,7 @@ import { calculateNextReview } from './utils/calculateNextReview';
           <Volume2 className="w-4 h-4" />
           {word.pronunciation}
         </p>
-        <p className="text-sm text-gray-500 mt-2">Прогресс: {word.correctCount}/5</p>
+        <p className="text-sm text-gray-500 mt-2">Уровень: {word.level}/{maxLevel}</p>
       </div>
       
       {showAnswer && (
@@ -1135,7 +1133,12 @@ import { calculateNextReview } from './utils/calculateNextReview';
         </div>
         <h3 className="font-bold text-lg text-center">{word.english}</h3>
         <p className="text-gray-600 text-center">{word.russian}</p>
-        <p className="text-xs text-gray-500 mt-1">Прогресс: {word.correctCount}/5</p>
+        <div className="flex items-center gap-2 mt-1">
+          <div className="progress-bar">
+            <div className="progress-bar-fill" style={{ width: `${(word.level / maxLevel) * 100}%` }} />
+          </div>
+          <span className="text-xs text-gray-500">{word.level}/{maxLevel}</span>
+        </div>
         <div className="flex gap-2 mt-2 flex-wrap justify-center">
           <span className={`badge-base ${
             word.status === 'mastered' ? 'bg-green-100 text-green-700' :
@@ -1193,7 +1196,12 @@ import { calculateNextReview } from './utils/calculateNextReview';
           <div>
             <h3 className="font-bold text-lg">{word.english}</h3>
             <p className="text-gray-600">{word.russian}</p>
-            <p className="text-xs text-gray-500">Прогресс: {word.correctCount}/5</p>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="progress-bar">
+                <div className="progress-bar-fill" style={{ width: `${(word.level / maxLevel) * 100}%` }} />
+              </div>
+              <span className="text-xs text-gray-500">{word.level}/{maxLevel}</span>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1297,15 +1305,27 @@ import { calculateNextReview } from './utils/calculateNextReview';
         </div>
         <ul className="space-y-2">
           {modal.words.map(w => (
-            <li key={w.id} className="flex items-center gap-3">
-              {typeof w.image === 'string' && (w.image.startsWith('http') || w.image.startsWith('data:')) ? (
-                <img src={w.image} alt={w.english} className="w-8 h-8 object-cover rounded" />
-              ) : (
-                <span className="text-2xl">{w.image}</span>
-              )}
-              <div>
-                <p className="font-semibold">{w.english}</p>
-                <p className="text-sm text-gray-600">{w.russian}</p>
+            <li key={w.id} className="word-card-list">
+              <div className="flex items-center gap-3">
+                {typeof w.image === 'string' && (w.image.startsWith('http') || w.image.startsWith('data:')) ? (
+                  <img src={w.image} alt={w.english} className="w-8 h-8 object-cover rounded" />
+                ) : (
+                  <span className="text-2xl">{w.image}</span>
+                )}
+                <div>
+                  <p className="font-semibold">{w.english}</p>
+                  <p className="text-sm text-gray-600">{w.russian}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="progress-bar">
+                      <div className="progress-bar-fill" style={{ width: `${(w.level / maxLevel) * 100}%` }} />
+                    </div>
+                    <span className="text-xs text-gray-500">{w.level}/{maxLevel}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col items-end text-xs text-gray-500">
+                <span>{w.category}</span>
+                <span>Повтор {formatDate(w.nextReview)}</span>
               </div>
             </li>
           ))}

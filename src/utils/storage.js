@@ -21,8 +21,9 @@ export const loadSavedData = (initialWords) => {
     const savedWords = localStorage.getItem('wordmaster_words');
     const savedStats = localStorage.getItem('wordmaster_stats');
 
+    const parsedWords = (savedWords ? JSON.parse(savedWords) : initialWords).map(w => ({ level: 0, ...w }));
     return {
-      words: savedWords ? JSON.parse(savedWords) : initialWords,
+      words: parsedWords,
       stats: savedStats ? { ...defaultStats, ...JSON.parse(savedStats) } : defaultStats
     };
   } catch (error) {

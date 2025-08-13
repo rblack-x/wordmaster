@@ -320,13 +320,13 @@ const defaultCategories = ['Разное', 'Путешествия', 'Приро
       const text = e.target.result;
       const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
       const imported = lines.map(line => {
-        const [english, russian, category, pronunciation, example] = line.split(',').map(s => s.trim());
+        const [english, russian, pronunciation, example] = line.split(',').map(s => s.trim());
         if (!english || !russian) return null;
         return {
           id: Date.now() + Math.random(),
           english,
           russian,
-          category: category || categoryOptions[0],
+          category: categoryOptions[0],
           image: '📝',
           examples: example ? [example] : [],
           pronunciation: pronunciation || '',
